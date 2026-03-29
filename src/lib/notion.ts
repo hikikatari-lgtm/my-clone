@@ -74,6 +74,19 @@ function pageToSong(page: PageObjectResponse): Song {
   };
 }
 
+export async function fetchSongById(id: string): Promise<Song | null> {
+  const notion = getNotionClient();
+  try {
+    const page = await notion.pages.retrieve({ page_id: id });
+    if ("properties" in page) {
+      return pageToSong(page as PageObjectResponse);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchSongs(): Promise<Song[]> {
   const notion = getNotionClient();
   const songs: Song[] = [];

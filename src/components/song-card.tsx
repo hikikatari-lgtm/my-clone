@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Music } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchArtwork } from "@/lib/itunes";
@@ -41,11 +42,13 @@ export function SongCard({ song }: { song: Song }) {
   }, [song.artist, song.title, song.artworkUrl]);
 
   return (
-    <div
+    <Link
+      href={`/songs/${song.id}`}
       className={cn(
         "group rounded-xl overflow-hidden bg-card border border-border",
         "transition-all duration-200 ease-out",
-        "hover:shadow-lg hover:-translate-y-1"
+        "hover:shadow-lg hover:-translate-y-1",
+        "block"
       )}
     >
       {/* Album art area */}
@@ -102,6 +105,6 @@ export function SongCard({ song }: { song: Song }) {
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
