@@ -17,7 +17,7 @@ export default async function HistoryDetailPage({
 
   if (!ep) notFound();
 
-  const notionUrl = `https://www.notion.so/directline/${ep.pageId}`;
+  const notionUrl = `https://directline.notion.site/${ep.pageId}`;
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 3rem)" }}>
