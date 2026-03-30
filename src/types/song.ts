@@ -6,6 +6,9 @@ export interface Song {
   key?: string;
   bpm?: number;
   artworkUrl?: string;
+  era?: string;
+  difficulty?: string;
+  chordProgression: string[];
 }
 
 export interface SongDetail extends Song {

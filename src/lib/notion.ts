@@ -106,6 +106,9 @@ function pageToSong(page: PageObjectResponse): Song {
     key: getSelectProperty(page, "Key"),
     bpm: getNumberProperty(page, "bpm"),
     artworkUrl: getCoverUrl(page),
+    era: getSelectProperty(page, "年代"),
+    difficulty: getSelectProperty(page, "難易度"),
+    chordProgression: getMultiSelectProperty(page, "コード進行"),
   };
 }
 
