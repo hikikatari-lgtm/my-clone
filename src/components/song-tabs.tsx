@@ -124,6 +124,11 @@ export function SongTabs({ song, blocks }: SongTabsProps) {
             </div>
           )}
 
+          {/* Audio Player */}
+          {blocks.some((b) => b.type === "audio") && (
+            <NotionRenderer blocks={blocks} onlyTypes={["audio"]} />
+          )}
+
           {/* External Links */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <a
