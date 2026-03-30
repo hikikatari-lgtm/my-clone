@@ -17,7 +17,10 @@ export default async function HistoryDetailPage({
 
   if (!ep) notFound();
 
-  const blocks = await fetchSongBlocks(ep.pageId).catch(() => []);
+  const blocks = await fetchSongBlocks(ep.pageId).catch((e) => {
+    console.error(`[History] Failed to fetch blocks for ep.${ep.ep}:`, e instanceof Error ? e.message : e);
+    return [];
+  });
 
   // Previous / Next navigation
   const prev = ep.ep > 1 ? getEpisodeByEp(ep.ep - 1) : undefined;
@@ -51,9 +54,14 @@ export default async function HistoryDetailPage({
           excludeTypes={["image", "video", "audio", "file", "embed"]}
         />
       ) : (
-        <p className="text-center text-muted-foreground py-12">
-          コンテンツを読み込めませんでした
-        </p>
+        <div className="text-center py-12 space-y-3">
+          <p className="text-muted-foreground">
+            コンテンツを読み込めませんでした
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Notionでこのページをインテグレーションに共有してください
+          </p>
+        </div>
       )}
 
       {/* Prev / Next */}
