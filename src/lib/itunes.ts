@@ -8,17 +8,14 @@ export async function fetchArtwork(
   if (cache.has(cacheKey)) return cache.get(cacheKey) ?? null;
 
   try {
-    const query = encodeURIComponent(`${artist} ${title}`);
-    const res = await fetch(
-      `https://itunes.apple.com/search?term=${query}&media=music&limit=1`
-    );
+    const params = new URLSearchParams({ artist, title });
+    const res = await fetch(`/api/artwork?${params}`);
     if (!res.ok) {
       cache.set(cacheKey, null);
       return null;
     }
     const data = await res.json();
-    const url: string | null =
-      data.results?.[0]?.artworkUrl100?.replace("100x100", "300x300") ?? null;
+    const url: string | null = data.url ?? null;
     cache.set(cacheKey, url);
     return url;
   } catch {
