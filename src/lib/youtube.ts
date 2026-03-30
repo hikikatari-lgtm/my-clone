@@ -1,4 +1,4 @@
-import type { Video, Playlist } from "@/types/video";
+import type { Video, Playlist, VideosPage } from "@/types/video";
 
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 const CHANNEL_ID = "UCBry-IGC_zBdmNkgMucqC7A";
@@ -9,33 +9,40 @@ function getApiKey(): string {
   return key;
 }
 
-interface PlaylistItemSnippet {
-  title: string;
-  resourceId: { videoId: string };
-  thumbnails: { high?: { url: string }; medium?: { url: string }; default?: { url: string } };
-  publishedAt: string;
+/** Parse ISO 8601 duration (PT#H#M#S) to seconds */
+function parseDuration(iso: string): number {
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const h = parseInt(match[1] ?? "0", 10);
+  const m = parseInt(match[2] ?? "0", 10);
+  const s = parseInt(match[3] ?? "0", 10);
+  return h * 3600 + m * 60 + s;
 }
 
-interface PlaylistItemStatus {
-  privacyStatus: string;
-}
-
+/** Fetch all playlists for the channel with snippet + contentDetails */
 export async function fetchPlaylists(): Promise<Playlist[]> {
   const key = getApiKey();
   const playlists: Playlist[] = [];
   let pageToken = "";
 
   do {
-    const url = `${API_BASE}/playlists?part=snippet&channelId=${CHANNEL_ID}&maxResults=50&key=${key}${pageToken ? `&pageToken=${pageToken}` : ""}`;
+    const url = `${API_BASE}/playlists?part=snippet,contentDetails&channelId=${CHANNEL_ID}&maxResults=50&key=${key}${pageToken ? `&pageToken=${pageToken}` : ""}`;
     const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error(`[YouTube] playlists error ${res.status}:`, errBody);
-      break;
-    }
+    if (!res.ok) break;
     const data = await res.json();
     for (const item of data.items ?? []) {
-      playlists.push({ id: item.id, title: item.snippet.title });
+      const thumb =
+        item.snippet.thumbnails.high?.url ??
+        item.snippet.thumbnails.medium?.url ??
+        item.snippet.thumbnails.default?.url ??
+        "";
+      playlists.push({
+        id: item.id,
+        title: item.snippet.title,
+        description: item.snippet.description ?? "",
+        thumbnailUrl: thumb,
+        videoCount: item.contentDetails?.itemCount ?? 0,
+      });
     }
     pageToken = data.nextPageToken ?? "";
   } while (pageToken);
@@ -43,106 +50,109 @@ export async function fetchPlaylists(): Promise<Playlist[]> {
   return playlists;
 }
 
-async function fetchPlaylistVideos(
-  playlistId: string,
-  playlistName: string
-): Promise<Video[]> {
+/** Get the uploads playlist ID for the channel */
+async function getUploadsPlaylistId(): Promise<string | null> {
   const key = getApiKey();
-  const videos: Video[] = [];
-  let pageToken = "";
-
-  do {
-    const url = `${API_BASE}/playlistItems?part=snippet,status&playlistId=${playlistId}&maxResults=50&key=${key}${pageToken ? `&pageToken=${pageToken}` : ""}`;
-    const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error(`[YouTube] playlistItems error ${res.status} (${playlistId}):`, errBody);
-      break;
-    }
-    const data = await res.json();
-    for (const item of data.items ?? []) {
-      const snippet: PlaylistItemSnippet = item.snippet;
-      const status: PlaylistItemStatus = item.status;
-      const thumb =
-        snippet.thumbnails.high?.url ??
-        snippet.thumbnails.medium?.url ??
-        snippet.thumbnails.default?.url ??
-        "";
-      videos.push({
-        id: snippet.resourceId.videoId,
-        title: snippet.title,
-        thumbnailUrl: thumb,
-        publishedAt: snippet.publishedAt,
-        playlistName,
-        membersOnly: status.privacyStatus === "unlisted" || status.privacyStatus === "private",
-      });
-    }
-    pageToken = data.nextPageToken ?? "";
-  } while (pageToken);
-
-  return videos;
+  const res = await fetch(
+    `${API_BASE}/channels?part=contentDetails&id=${CHANNEL_ID}&key=${key}`,
+    { next: { revalidate: 3600 } }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads ?? null;
 }
 
-export async function fetchAllVideos(): Promise<{
-  videos: Video[];
-  playlists: Playlist[];
-}> {
+/** Fetch videos from a playlist with duration info, paginated */
+export async function fetchPlaylistVideosPage(
+  playlistId: string,
+  pageToken?: string,
+  maxResults = 20
+): Promise<{ videos: Video[]; nextPageToken?: string }> {
   const key = getApiKey();
 
-  // Fetch uploads playlist (all channel videos)
-  const channelUrl = `${API_BASE}/channels?part=contentDetails&id=${CHANNEL_ID}&key=${key}`;
-  console.log("[YouTube] Fetching channel:", CHANNEL_ID);
-  const channelRes = await fetch(channelUrl, { next: { revalidate: 3600 } });
-  console.log("[YouTube] Channel response status:", channelRes.status);
+  let url = `${API_BASE}/playlistItems?part=snippet,status&playlistId=${playlistId}&maxResults=${maxResults}&key=${key}`;
+  if (pageToken) url += `&pageToken=${pageToken}`;
 
-  let allVideos: Video[] = [];
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) {
+    throw new Error(`playlistItems error ${res.status}`);
+  }
+  const data = await res.json();
 
-  if (!channelRes.ok) {
-    const errBody = await channelRes.text();
-    console.error("[YouTube] Channel API error body:", errBody);
-    throw new Error(`YouTube channels API error ${channelRes.status}: ${errBody}`);
+  const videoIds: string[] = [];
+  const rawItems: Array<{
+    videoId: string;
+    title: string;
+    thumbnailUrl: string;
+    publishedAt: string;
+    privacyStatus: string;
+  }> = [];
+
+  for (const item of data.items ?? []) {
+    const snippet = item.snippet;
+    const videoId = snippet.resourceId.videoId;
+    const thumb =
+      snippet.thumbnails.high?.url ??
+      snippet.thumbnails.medium?.url ??
+      snippet.thumbnails.default?.url ??
+      "";
+    videoIds.push(videoId);
+    rawItems.push({
+      videoId,
+      title: snippet.title,
+      thumbnailUrl: thumb,
+      publishedAt: snippet.publishedAt,
+      privacyStatus: item.status?.privacyStatus ?? "public",
+    });
   }
 
-  const channelData = await channelRes.json();
-  console.log("[YouTube] Channel data items:", channelData.items?.length ?? 0);
-  console.log("[YouTube] Channel response:", JSON.stringify(channelData, null, 2));
-
-  const uploadsId =
-    channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-  console.log("[YouTube] Uploads playlist ID:", uploadsId ?? "(not found)");
-
-  if (uploadsId) {
-    allVideos = await fetchPlaylistVideos(uploadsId, "All Uploads");
-    console.log("[YouTube] Fetched upload videos:", allVideos.length);
-  }
-
-  const playlists = await fetchPlaylists();
-  console.log("[YouTube] Fetched playlists:", playlists.length);
-
-  // Map video IDs to playlist names from actual playlists
-  const playlistVideoMap = new Map<string, string>();
-  const playlistFetches = playlists.map(async (pl) => {
-    const vids = await fetchPlaylistVideos(pl.id, pl.title);
-    for (const v of vids) {
-      playlistVideoMap.set(v.id, pl.title);
+  // Fetch durations via videos.list
+  const durationMap = new Map<string, number>();
+  if (videoIds.length > 0) {
+    const vidsUrl = `${API_BASE}/videos?part=contentDetails&id=${videoIds.join(",")}&key=${key}`;
+    const vidsRes = await fetch(vidsUrl, { next: { revalidate: 3600 } });
+    if (vidsRes.ok) {
+      const vidsData = await vidsRes.json();
+      for (const v of vidsData.items ?? []) {
+        durationMap.set(v.id, parseDuration(v.contentDetails.duration));
+      }
     }
+  }
+
+  const videos: Video[] = rawItems.map((raw) => {
+    const durationSec = durationMap.get(raw.videoId) ?? 0;
+    return {
+      id: raw.videoId,
+      title: raw.title,
+      thumbnailUrl: raw.thumbnailUrl,
+      publishedAt: raw.publishedAt,
+      membersOnly:
+        raw.privacyStatus === "unlisted" || raw.privacyStatus === "private",
+      isShort: durationSec > 0 && durationSec <= 60,
+    };
   });
-  await Promise.all(playlistFetches);
 
-  // Assign playlist names to videos
-  for (const video of allVideos) {
-    const plName = playlistVideoMap.get(video.id);
-    if (plName) {
-      video.playlistName = plName;
-    } else {
-      video.playlistName = undefined;
-    }
+  return {
+    videos,
+    nextPageToken: data.nextPageToken ?? undefined,
+  };
+}
+
+/** Fetch a page of videos from the uploads playlist (all channel videos) */
+export async function fetchVideosPage(
+  pageToken?: string,
+  maxResults = 20
+): Promise<VideosPage> {
+  const uploadsId = await getUploadsPlaylistId();
+  if (!uploadsId) {
+    return { videos: [], playlists: [] };
   }
 
-  // Sort by publishedAt descending
-  allVideos.sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  );
+  const page = await fetchPlaylistVideosPage(uploadsId, pageToken, maxResults);
 
-  return { videos: allVideos, playlists };
+  return {
+    videos: page.videos,
+    nextPageToken: page.nextPageToken,
+    playlists: [],
+  };
 }

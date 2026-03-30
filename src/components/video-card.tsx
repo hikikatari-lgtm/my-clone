@@ -34,6 +34,11 @@ export function VideoCard({ video }: { video: Video }) {
             Members
           </span>
         )}
+        {video.isShort && (
+          <span className="absolute top-2 left-2 rounded bg-red-600/90 px-1.5 py-0.5 text-[10px] font-bold text-white">
+            Short
+          </span>
+        )}
       </div>
 
       {/* Info */}

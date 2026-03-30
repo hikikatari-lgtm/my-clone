@@ -3,14 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { VideoCard } from "@/components/video-card";
-import type { Video, Playlist } from "@/types/video";
+import type { Video } from "@/types/video";
 
 type VideoType = "regular" | "short" | "all";
 
-export function VideoLibrary() {
+export function PlaylistVideos({ playlistId }: { playlistId: string }) {
   const [videos, setVideos] = useState<Video[]>([]);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const [videoType, setVideoType] = useState<VideoType>("regular");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -19,19 +17,14 @@ export function VideoLibrary() {
 
   const fetchPage = useCallback(
     async (pageToken?: string) => {
-      const url = pageToken
-        ? `/api/videos?pageToken=${pageToken}`
-        : "/api/videos";
+      let url = `/api/videos/playlist?id=${playlistId}`;
+      if (pageToken) url += `&pageToken=${pageToken}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      return data as {
-        videos: Video[];
-        nextPageToken?: string;
-        playlists: Playlist[];
-      };
+      return data as { videos: Video[]; nextPageToken?: string };
     },
-    []
+    [playlistId]
   );
 
   useEffect(() => {
@@ -39,7 +32,6 @@ export function VideoLibrary() {
       .then((data) => {
         setVideos(data.videos);
         setNextPageToken(data.nextPageToken);
-        if (data.playlists.length > 0) setPlaylists(data.playlists);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -59,20 +51,12 @@ export function VideoLibrary() {
     }
   };
 
-  // Apply filters
   let filtered = videos;
   if (videoType === "regular") {
     filtered = filtered.filter((v) => !v.isShort);
   } else if (videoType === "short") {
     filtered = filtered.filter((v) => v.isShort);
   }
-  if (selectedPlaylist) {
-    filtered = filtered.filter((v) => v.playlistName === selectedPlaylist);
-  }
-
-  const playlistNames = [
-    ...new Set(videos.map((v) => v.playlistName).filter(Boolean)),
-  ] as string[];
 
   const typeButtons: { key: VideoType; label: string }[] = [
     { key: "regular", label: "本編" },
@@ -100,45 +84,12 @@ export function VideoLibrary() {
         ))}
       </div>
 
-      {/* Playlist Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-        <button
-          onClick={() => setSelectedPlaylist(null)}
-          className={cn(
-            "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-            selectedPlaylist === null
-              ? "bg-foreground text-background"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          )}
-        >
-          All
-        </button>
-        {playlistNames.map((name) => (
-          <button
-            key={name}
-            onClick={() =>
-              setSelectedPlaylist(name === selectedPlaylist ? null : name)
-            }
-            className={cn(
-              "shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-              name === selectedPlaylist
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            )}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
-
-      {/* Error */}
       {error && (
         <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-600">
           API Error: {error}
         </div>
       )}
 
-      {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -163,7 +114,6 @@ export function VideoLibrary() {
             ))}
           </div>
 
-          {/* Load more */}
           {nextPageToken && (
             <div className="flex justify-center pt-4">
               <button

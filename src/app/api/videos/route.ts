@@ -1,34 +1,35 @@
-import { NextResponse } from "next/server";
-import { fetchAllVideos } from "@/lib/youtube";
+import { NextRequest, NextResponse } from "next/server";
+import { fetchVideosPage, fetchPlaylists } from "@/lib/youtube";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const hasKey = !!process.env.YOUTUBE_API_KEY;
-  const keyPrefix = process.env.YOUTUBE_API_KEY?.slice(0, 8) ?? "(empty)";
-
-  console.log("[api/videos] === START ===");
-  console.log("[api/videos] YOUTUBE_API_KEY present:", hasKey, "prefix:", keyPrefix);
-
   if (!hasKey) {
-    console.error("[api/videos] YOUTUBE_API_KEY is NOT set in env");
     return NextResponse.json(
       { error: "YOUTUBE_API_KEY is not configured", videos: [], playlists: [] },
       { status: 500 }
     );
   }
 
+  const pageToken = request.nextUrl.searchParams.get("pageToken") ?? undefined;
+
   try {
-    const data = await fetchAllVideos();
-    console.log("[api/videos] Success — videos:", data.videos.length, "playlists:", data.playlists.length);
-    return NextResponse.json(data, {
+    const page = await fetchVideosPage(pageToken, 20);
+
+    // Only fetch playlists on initial load (no pageToken)
+    if (!pageToken) {
+      page.playlists = await fetchPlaylists();
+    }
+
+    return NextResponse.json(page, {
       headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600" },
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    const stack = e instanceof Error ? e.stack : "";
-    console.error("[api/videos] CAUGHT ERROR:", message);
-    console.error("[api/videos] Stack:", stack);
-    return NextResponse.json({ error: message, videos: [], playlists: [] }, { status: 500 });
+    return NextResponse.json(
+      { error: message, videos: [], playlists: [] },
+      { status: 500 }
+    );
   }
 }
