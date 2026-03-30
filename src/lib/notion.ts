@@ -62,6 +62,14 @@ function getMultiSelectProperty(
   return [];
 }
 
+function getCheckboxProperty(page: PageObjectResponse, name: string): boolean {
+  const prop = page.properties[name];
+  if (prop?.type === "checkbox") {
+    return prop.checkbox;
+  }
+  return false;
+}
+
 function getRelationIds(page: PageObjectResponse, name: string): string[] {
   const prop = page.properties[name];
   if (prop?.type === "relation") {
@@ -126,6 +134,7 @@ export async function fetchSongDetailById(
     const p = page as PageObjectResponse;
     const base = pageToSong(p);
 
+    const confirmed = getCheckboxProperty(p, "✅ 確認済み");
     const chordProgression = getMultiSelectProperty(p, "コード進行");
     const romanNumeral = getTextProperty(p, "進行ローマ数字") || undefined;
     const era = getSelectProperty(p, "年代");
@@ -138,6 +147,7 @@ export async function fetchSongDetailById(
 
     return {
       ...base,
+      confirmed,
       chordProgression,
       romanNumeral,
       era,

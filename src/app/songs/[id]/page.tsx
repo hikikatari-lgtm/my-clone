@@ -78,8 +78,8 @@ export default async function SongDetailPage({
             </div>
           </div>
 
-          {/* Chord Progression */}
-          {song.chordProgression.length > 0 && (
+          {/* Chord Progression (confirmed only) */}
+          {song.confirmed && song.chordProgression.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs text-muted-foreground">Chord Progression</p>
               <div className="flex flex-wrap gap-1.5">
@@ -95,8 +95,8 @@ export default async function SongDetailPage({
             </div>
           )}
 
-          {/* Roman Numeral */}
-          {song.romanNumeral && (
+          {/* Roman Numeral (confirmed only) */}
+          {song.confirmed && song.romanNumeral && (
             <div className="rounded-lg bg-muted/50 border border-border p-3">
               <p className="text-xs text-muted-foreground mb-1">Roman Numeral</p>
               <p className="text-sm font-mono font-medium text-foreground">

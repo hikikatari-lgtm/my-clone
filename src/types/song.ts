@@ -12,6 +12,7 @@ export interface SongDetail extends Song {
   chordProgression: string[];
   romanNumeral?: string;
   era?: string;
+  confirmed: boolean;
   artistRelation?: {
     id: string;
     name: string;
