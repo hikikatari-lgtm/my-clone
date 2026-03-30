@@ -1,7 +1,7 @@
 import type { Video, Playlist } from "@/types/video";
 
 const API_BASE = "https://www.googleapis.com/youtube/v3";
-const CHANNEL_ID = "UCBry3JqHOBOFTmDlByL5Rng";
+const CHANNEL_ID = "UCBry-IGC_zBdmNkgMucqC7A";
 
 function getApiKey(): string {
   const key = process.env.YOUTUBE_API_KEY;
