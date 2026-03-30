@@ -281,6 +281,7 @@ export async function fetchPlaylistsFromNotion(): Promise<Playlist[]> {
     isRecommended: boolean;
     description: string;
     sortOrder: number;
+    thumbnailUrl: string;
   }> = [];
   let cursor: string | undefined;
 
@@ -343,6 +344,12 @@ export async function fetchPlaylistsFromNotion(): Promise<Playlist[]> {
           ? orderProp.number
           : 999;
 
+      const thumbProp = p.properties["thumbnail_url"];
+      const thumbnailUrl =
+        thumbProp?.type === "rich_text"
+          ? thumbProp.rich_text.map((t) => t.plain_text).join("")
+          : "";
+
       if (playlistId) {
         items.push({
           playlistId,
@@ -352,6 +359,7 @@ export async function fetchPlaylistsFromNotion(): Promise<Playlist[]> {
           isRecommended,
           description,
           sortOrder,
+          thumbnailUrl,
         });
       }
     }
@@ -368,7 +376,7 @@ export async function fetchPlaylistsFromNotion(): Promise<Playlist[]> {
     id: item.playlistId,
     title: item.title,
     description: item.description,
-    thumbnailUrl: "",
+    thumbnailUrl: item.thumbnailUrl,
     videoCount: item.videoCount,
     category: item.category,
     isRecommended: item.isRecommended,

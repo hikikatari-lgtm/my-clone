@@ -78,11 +78,17 @@ def fetch_youtube_playlists():
             data = json.loads(res.read())
 
         for item in data.get("items", []):
+            thumbs = item["snippet"].get("thumbnails", {})
+            thumb_url = (
+                (thumbs.get("maxres") or thumbs.get("high") or thumbs.get("medium") or thumbs.get("default") or {})
+                .get("url", "")
+            )
             playlists.append({
                 "playlist_id": item["id"],
                 "title": item["snippet"]["title"],
                 "description": item["snippet"].get("description", ""),
                 "video_count": item["contentDetails"]["itemCount"],
+                "thumbnail_url": thumb_url,
             })
 
         page_token = data.get("nextPageToken", "")
@@ -92,9 +98,9 @@ def fetch_youtube_playlists():
     return playlists
 
 
-def fetch_existing_playlist_ids():
-    """Fetch all playlist_ids already in the Notion DB."""
-    existing = set()
+def fetch_existing_playlists():
+    """Fetch all playlist_ids and page_ids already in the Notion DB."""
+    existing = {}  # playlist_id -> { page_id, has_thumbnail }
     start_cursor = None
 
     while True:
@@ -110,7 +116,14 @@ def fetch_existing_playlist_ids():
             if pid_prop.get("type") == "rich_text":
                 pid = "".join(t["plain_text"] for t in pid_prop.get("rich_text", []))
                 if pid:
-                    existing.add(pid)
+                    thumb_prop = props.get("thumbnail_url", {})
+                    has_thumb = False
+                    if thumb_prop.get("type") == "rich_text":
+                        has_thumb = bool("".join(t["plain_text"] for t in thumb_prop.get("rich_text", [])))
+                    existing[pid] = {
+                        "page_id": page["id"],
+                        "has_thumbnail": has_thumb,
+                    }
 
         if data.get("has_more") and data.get("next_cursor"):
             start_cursor = data["next_cursor"]
@@ -143,9 +156,23 @@ def create_notion_page(playlist):
             "表示順": {
                 "number": 50,
             },
+            "thumbnail_url": {
+                "rich_text": [{"text": {"content": playlist.get("thumbnail_url", "")}}],
+            },
         },
     }
     return notion_request("POST", "pages", body)
+
+
+def update_thumbnail(page_id, thumbnail_url):
+    """Update the thumbnail_url on an existing Notion page."""
+    notion_request("PATCH", f"pages/{page_id}", {
+        "properties": {
+            "thumbnail_url": {
+                "rich_text": [{"text": {"content": thumbnail_url}}],
+            },
+        },
+    })
 
 
 def main():
@@ -156,37 +183,63 @@ def main():
     print(f"Found {len(yt_playlists)} playlists on YouTube\n")
 
     print("Fetching existing Notion entries...")
-    existing_ids = fetch_existing_playlist_ids()
-    print(f"Found {len(existing_ids)} already in Notion\n")
-
-    new_playlists = [p for p in yt_playlists if p["playlist_id"] not in existing_ids]
-    print(f"New playlists to add: {len(new_playlists)}\n")
+    existing = fetch_existing_playlists()
+    print(f"Found {len(existing)} already in Notion\n")
 
     created = 0
+    updated = 0
     skipped = 0
+    errors = 0
 
-    for i, pl in enumerate(new_playlists, 1):
-        prefix = f"[{i}/{len(new_playlists)}]"
+    for i, pl in enumerate(yt_playlists, 1):
+        prefix = f"[{i}/{len(yt_playlists)}]"
+        pid = pl["playlist_id"]
+        thumb = pl.get("thumbnail_url", "")
 
-        if dry_run:
-            print(f"{prefix} DRY RUN: {pl['title']} ({pl['video_count']} videos)")
-            created += 1
-            continue
+        if pid in existing:
+            # Existing — update thumbnail if missing
+            entry = existing[pid]
+            if entry["has_thumbnail"] or not thumb:
+                print(f"{prefix} SKIP: {pl['title']}")
+                skipped += 1
+                continue
 
-        try:
-            create_notion_page(pl)
-            print(f"{prefix} CREATED: {pl['title']} ({pl['video_count']} videos)")
-            created += 1
-            time.sleep(0.35)  # Notion rate limit
-        except Exception as e:
-            print(f"{prefix} ERROR: {pl['title']} — {e}")
-            skipped += 1
+            if dry_run:
+                print(f"{prefix} DRY UPDATE THUMB: {pl['title']}")
+                updated += 1
+                continue
+
+            try:
+                update_thumbnail(entry["page_id"], thumb)
+                print(f"{prefix} UPDATED THUMB: {pl['title']}")
+                updated += 1
+                time.sleep(0.35)
+            except Exception as e:
+                print(f"{prefix} ERROR: {pl['title']} — {e}")
+                errors += 1
+        else:
+            # New — create
+            if dry_run:
+                print(f"{prefix} DRY CREATE: {pl['title']} ({pl['video_count']} videos)")
+                created += 1
+                continue
+
+            try:
+                create_notion_page(pl)
+                print(f"{prefix} CREATED: {pl['title']} ({pl['video_count']} videos)")
+                created += 1
+                time.sleep(0.35)
+            except Exception as e:
+                print(f"{prefix} ERROR: {pl['title']} — {e}")
+                errors += 1
 
     print(f"\n--- Summary ---")
-    print(f"YouTube total:  {len(yt_playlists)}")
-    print(f"Already in DB:  {len(existing_ids)}")
-    print(f"Created:        {created}")
-    print(f"Skipped/Error:  {skipped}")
+    print(f"YouTube total:    {len(yt_playlists)}")
+    print(f"Already in DB:    {len(existing)}")
+    print(f"Created:          {created}")
+    print(f"Thumb updated:    {updated}")
+    print(f"Skipped:          {skipped}")
+    print(f"Errors:           {errors}")
 
 
 if __name__ == "__main__":

@@ -11,17 +11,19 @@ export const metadata = {
 export default async function VideosPage() {
   let playlists = await fetchPlaylistsFromNotion();
 
-  // Batch-fetch thumbnails from YouTube API
-  const playlistIds = playlists.map((p) => p.id);
-  const thumbnails = await fetchPlaylistThumbnails(playlistIds).catch(
-    () => new Map<string, string>()
-  );
+  // Only fetch YouTube thumbnails for playlists missing them in Notion
+  const missingIds = playlists
+    .filter((p) => !p.thumbnailUrl)
+    .map((p) => p.id);
 
-  // Assign thumbnails
-  playlists = playlists.map((p) => ({
-    ...p,
-    thumbnailUrl: thumbnails.get(p.id) ?? "",
-  }));
+  if (missingIds.length > 0) {
+    const thumbnails = await fetchPlaylistThumbnails(missingIds).catch(
+      () => new Map<string, string>()
+    );
+    playlists = playlists.map((p) =>
+      p.thumbnailUrl ? p : { ...p, thumbnailUrl: thumbnails.get(p.id) ?? "" }
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
