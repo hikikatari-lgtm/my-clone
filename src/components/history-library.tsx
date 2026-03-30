@@ -1,15 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
-
-interface Episode {
-  ep: number;
-  title: string;
-  genre: string;
-  url: string;
-}
+import type { Episode } from "@/lib/episodes";
 
 const genreColors: Record<string, string> = {
   "ブルース": "from-blue-600 to-blue-800",
@@ -76,11 +70,9 @@ export function HistoryLibrary({ episodes }: { episodes: Episode[] }) {
         {filtered.map((ep) => {
           const gradient = genreColors[ep.genre] ?? "from-slate-600 to-slate-800";
           return (
-            <a
+            <Link
               key={ep.ep}
-              href={ep.url}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/history/${ep.ep}`}
               className="group block rounded-xl overflow-hidden bg-card border border-border transition-all duration-200 ease-out hover:shadow-lg hover:-translate-y-1"
             >
               <div
@@ -95,7 +87,6 @@ export function HistoryLibrary({ episodes }: { episodes: Episode[] }) {
                 <span className="text-5xl font-black">
                   {String(ep.ep).padStart(2, "0")}
                 </span>
-                <ExternalLink className="absolute top-3 right-3 size-4 opacity-0 group-hover:opacity-70 transition-opacity" />
               </div>
               <div className="p-3 space-y-1.5">
                 <h3 className="text-sm font-semibold text-foreground line-clamp-2 group-hover:text-blue-500 transition-colors">
@@ -110,7 +101,7 @@ export function HistoryLibrary({ episodes }: { episodes: Episode[] }) {
                   {ep.genre}
                 </span>
               </div>
-            </a>
+            </Link>
           );
         })}
       </div>
