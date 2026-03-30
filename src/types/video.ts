@@ -14,6 +14,8 @@ export interface Playlist {
   description: string;
   thumbnailUrl: string;
   videoCount: number;
+  category?: string;
+  isRecommended?: boolean;
 }
 
 export interface VideosPage {

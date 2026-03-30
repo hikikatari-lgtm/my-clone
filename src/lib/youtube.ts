@@ -138,6 +138,33 @@ export async function fetchPlaylistVideosPage(
   };
 }
 
+/** Batch-fetch playlist thumbnails from YouTube API. Returns Map<playlistId, thumbnailUrl> */
+export async function fetchPlaylistThumbnails(
+  playlistIds: string[]
+): Promise<Map<string, string>> {
+  const key = getApiKey();
+  const map = new Map<string, string>();
+
+  // YouTube API allows up to 50 IDs per request
+  for (let i = 0; i < playlistIds.length; i += 50) {
+    const batch = playlistIds.slice(i, i + 50);
+    const url = `${API_BASE}/playlists?part=snippet&id=${batch.join(",")}&key=${key}`;
+    const res = await fetch(url, { next: { revalidate: 3600 } });
+    if (!res.ok) continue;
+    const data = await res.json();
+    for (const item of data.items ?? []) {
+      const thumb =
+        item.snippet.thumbnails.high?.url ??
+        item.snippet.thumbnails.medium?.url ??
+        item.snippet.thumbnails.default?.url ??
+        "";
+      if (thumb) map.set(item.id, thumb);
+    }
+  }
+
+  return map;
+}
+
 /** Fetch a page of videos from the uploads playlist (all channel videos) */
 export async function fetchVideosPage(
   pageToken?: string,

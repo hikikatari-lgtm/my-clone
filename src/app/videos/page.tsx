@@ -1,10 +1,28 @@
-import { PlaylistGrid } from "@/components/playlist-grid";
+import { fetchPlaylistsFromNotion } from "@/lib/notion";
+import { fetchPlaylistThumbnails } from "@/lib/youtube";
+import { PlaylistCard } from "@/components/playlist-card";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Video Library",
 };
 
-export default function VideosPage() {
+export default async function VideosPage() {
+  let playlists = await fetchPlaylistsFromNotion();
+
+  // Batch-fetch thumbnails from YouTube API
+  const playlistIds = playlists.map((p) => p.id);
+  const thumbnails = await fetchPlaylistThumbnails(playlistIds).catch(
+    () => new Map<string, string>()
+  );
+
+  // Assign thumbnails
+  playlists = playlists.map((p) => ({
+    ...p,
+    thumbnailUrl: thumbnails.get(p.id) ?? "",
+  }));
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6">
@@ -13,7 +31,18 @@ export default function VideosPage() {
           再生リストを選択してください
         </p>
       </div>
-      <PlaylistGrid />
+
+      {playlists.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">
+          No playlists found.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {playlists.map((pl) => (
+            <PlaylistCard key={pl.id} playlist={pl} />
+          ))}
+        </div>
+      )}
     </main>
   );
 }

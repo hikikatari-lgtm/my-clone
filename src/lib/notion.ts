@@ -2,8 +2,10 @@ import { Client } from "@notionhq/client";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints/common";
 import type { QueryDataSourceResponse } from "@notionhq/client/build/src/api-endpoints/data-sources";
 import type { Song, SongDetail, NotionBlock } from "@/types/song";
+import type { Playlist } from "@/types/video";
 
 const DATA_SOURCE_ID = "917e0b71-8fda-474c-8fba-9d751866e5dd";
+const PLAYLIST_DB_ID = "6ec1fb96-a440-4bca-a6f7-7b3a42bc7d83";
 
 function getNotionClient() {
   const token = process.env.NOTION_API_KEY;
@@ -252,4 +254,123 @@ export async function fetchSongBlocks(pageId: string): Promise<NotionBlock[]> {
   } while (cursor);
 
   return blocks;
+}
+
+async function notionPost(path: string, body: Record<string, unknown>) {
+  const token = process.env.NOTION_API_KEY;
+  if (!token) throw new Error("NOTION_API_KEY is not set");
+  const res = await fetch(`https://api.notion.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Notion-Version": "2022-06-28",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Notion API error ${res.status}`);
+  return res.json();
+}
+
+export async function fetchPlaylistsFromNotion(): Promise<Playlist[]> {
+  const items: Array<{
+    playlistId: string;
+    title: string;
+    videoCount: number;
+    category?: string;
+    isRecommended: boolean;
+    description: string;
+    sortOrder: number;
+  }> = [];
+  let cursor: string | undefined;
+
+  do {
+    const body: Record<string, unknown> = {
+      filter: {
+        property: "公開設定",
+        select: { equals: "表示" },
+      },
+      page_size: 100,
+    };
+    if (cursor) body.start_cursor = cursor;
+
+    const response = await notionPost(
+      `databases/${PLAYLIST_DB_ID}/query`,
+      body
+    );
+
+    for (const page of response.results ?? []) {
+      if (!page.properties) continue;
+      const p = page as PageObjectResponse;
+
+      const titleProp = p.properties["タイトル"];
+      const title =
+        titleProp?.type === "title"
+          ? titleProp.title.map((t) => t.plain_text).join("")
+          : "";
+
+      const pidProp = p.properties["playlist_id"];
+      const playlistId =
+        pidProp?.type === "rich_text"
+          ? pidProp.rich_text.map((t) => t.plain_text).join("")
+          : "";
+
+      const countProp = p.properties["動画数"];
+      const videoCount =
+        countProp?.type === "number" && countProp.number !== null
+          ? countProp.number
+          : 0;
+
+      const catProp = p.properties["カテゴリ"];
+      const category =
+        catProp?.type === "select" && catProp.select
+          ? catProp.select.name
+          : undefined;
+
+      const recProp = p.properties["おすすめ"];
+      const isRecommended =
+        recProp?.type === "checkbox" ? recProp.checkbox : false;
+
+      const descProp = p.properties["説明文"];
+      const description =
+        descProp?.type === "rich_text"
+          ? descProp.rich_text.map((t) => t.plain_text).join("")
+          : "";
+
+      const orderProp = p.properties["表示順"];
+      const sortOrder =
+        orderProp?.type === "number" && orderProp.number !== null
+          ? orderProp.number
+          : 999;
+
+      if (playlistId) {
+        items.push({
+          playlistId,
+          title,
+          videoCount,
+          category,
+          isRecommended,
+          description,
+          sortOrder,
+        });
+      }
+    }
+
+    cursor = response.has_more
+      ? (response.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor);
+
+  // Sort by sortOrder asc, then videoCount desc
+  items.sort((a, b) => a.sortOrder - b.sortOrder || b.videoCount - a.videoCount);
+
+  return items.map((item) => ({
+    id: item.playlistId,
+    title: item.title,
+    description: item.description,
+    thumbnailUrl: "",
+    videoCount: item.videoCount,
+    category: item.category,
+    isRecommended: item.isRecommended,
+  }));
 }
