@@ -292,6 +292,22 @@ function wrapListItems(blocks: NotionBlock[]): React.ReactNode[] {
   return nodes;
 }
 
-export function NotionRenderer({ blocks }: { blocks: NotionBlock[] }) {
-  return <div className="space-y-2">{wrapListItems(blocks)}</div>;
+interface NotionRendererProps {
+  blocks: NotionBlock[];
+  onlyTypes?: string[];
+  excludeTypes?: string[];
+}
+
+export function NotionRenderer({
+  blocks,
+  onlyTypes,
+  excludeTypes,
+}: NotionRendererProps) {
+  let filtered = blocks;
+  if (onlyTypes) {
+    filtered = blocks.filter((b) => onlyTypes.includes(b.type));
+  } else if (excludeTypes) {
+    filtered = blocks.filter((b) => !excludeTypes.includes(b.type));
+  }
+  return <div className="space-y-2">{wrapListItems(filtered)}</div>;
 }
