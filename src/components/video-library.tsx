@@ -10,14 +10,17 @@ export function VideoLibrary() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/videos")
       .then((res) => res.json())
       .then((data) => {
+        if (data.error) setError(data.error);
         if (data.videos) setVideos(data.videos);
         if (data.playlists) setPlaylists(data.playlists);
       })
+      .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
@@ -62,6 +65,13 @@ export function VideoLibrary() {
           </button>
         ))}
       </div>
+
+      {/* Error */}
+      {error && (
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-600">
+          API Error: {error}
+        </div>
+      )}
 
       {/* Grid */}
       {loading ? (

@@ -28,7 +28,11 @@ export async function fetchPlaylists(): Promise<Playlist[]> {
   do {
     const url = `${API_BASE}/playlists?part=snippet&channelId=${CHANNEL_ID}&maxResults=50&key=${key}${pageToken ? `&pageToken=${pageToken}` : ""}`;
     const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (!res.ok) break;
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error(`[YouTube] playlists error ${res.status}:`, errBody);
+      break;
+    }
     const data = await res.json();
     for (const item of data.items ?? []) {
       playlists.push({ id: item.id, title: item.snippet.title });
@@ -50,7 +54,11 @@ async function fetchPlaylistVideos(
   do {
     const url = `${API_BASE}/playlistItems?part=snippet,status&playlistId=${playlistId}&maxResults=50&key=${key}${pageToken ? `&pageToken=${pageToken}` : ""}`;
     const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (!res.ok) break;
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error(`[YouTube] playlistItems error ${res.status} (${playlistId}):`, errBody);
+      break;
+    }
     const data = await res.json();
     for (const item of data.items ?? []) {
       const snippet: PlaylistItemSnippet = item.snippet;
@@ -90,13 +98,16 @@ export async function fetchAllVideos(): Promise<{
   let allVideos: Video[] = [];
   const playlists = await fetchPlaylists();
 
-  if (channelRes.ok) {
-    const channelData = await channelRes.json();
-    const uploadsId =
-      channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-    if (uploadsId) {
-      allVideos = await fetchPlaylistVideos(uploadsId, "All Uploads");
-    }
+  if (!channelRes.ok) {
+    const errBody = await channelRes.text();
+    throw new Error(`YouTube channels API error ${channelRes.status}: ${errBody}`);
+  }
+
+  const channelData = await channelRes.json();
+  const uploadsId =
+    channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  if (uploadsId) {
+    allVideos = await fetchPlaylistVideos(uploadsId, "All Uploads");
   }
 
   // Map video IDs to playlist names from actual playlists
