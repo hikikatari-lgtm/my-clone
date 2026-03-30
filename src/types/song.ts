@@ -57,6 +57,11 @@ export interface NotionBlock {
     type: string;
     external?: { url: string };
   };
+  audio?: {
+    type: string;
+    file?: { url: string; expiry_time: string };
+    external?: { url: string };
+  };
   divider?: Record<string, never>;
   callout?: { rich_text: NotionRichText[]; icon?: { emoji?: string }; color: string };
   quote?: { rich_text: NotionRichText[]; color: string };

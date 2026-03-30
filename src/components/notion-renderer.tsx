@@ -215,8 +215,22 @@ function BlockRenderer({ block }: { block: NotionBlock }) {
         </details>
       );
 
-    case "audio":
-      return null;
+    case "audio": {
+      const audioUrl =
+        block.audio?.type === "file"
+          ? block.audio.file?.url
+          : block.audio?.external?.url;
+      if (!audioUrl) return null;
+      return (
+        <audio
+          controls
+          className="w-full mt-4 mb-2"
+          onError={(e) => (e.currentTarget.style.display = "none")}
+        >
+          <source src={audioUrl} />
+        </audio>
+      );
+    }
 
     default:
       return null;
