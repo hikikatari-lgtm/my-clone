@@ -1,7 +1,7 @@
 import { Client } from "@notionhq/client";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints/common";
 import type { QueryDataSourceResponse } from "@notionhq/client/build/src/api-endpoints/data-sources";
-import type { Song } from "@/types/song";
+import type { Song, SongDetail } from "@/types/song";
 
 const DATA_SOURCE_ID = "917e0b71-8fda-474c-8fba-9d751866e5dd";
 
@@ -62,6 +62,14 @@ function getMultiSelectProperty(
   return [];
 }
 
+function getRelationIds(page: PageObjectResponse, name: string): string[] {
+  const prop = page.properties[name];
+  if (prop?.type === "relation") {
+    return prop.relation.map((r) => r.id);
+  }
+  return [];
+}
+
 function pageToSong(page: PageObjectResponse): Song {
   const genres = getMultiSelectProperty(page, "音楽ジャンル");
   return {
@@ -82,6 +90,59 @@ export async function fetchSongById(id: string): Promise<Song | null> {
       return pageToSong(page as PageObjectResponse);
     }
     return null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveArtistName(
+  notion: Client,
+  pageId: string
+): Promise<{ id: string; name: string } | undefined> {
+  try {
+    const page = await notion.pages.retrieve({ page_id: pageId });
+    if (!("properties" in page)) return undefined;
+    const p = page as PageObjectResponse;
+    // Artist DB uses "Name" or title column
+    for (const prop of Object.values(p.properties)) {
+      if (prop.type === "title") {
+        const name = prop.title.map((t) => t.plain_text).join("");
+        if (name) return { id: pageId, name };
+      }
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function fetchSongDetailById(
+  id: string
+): Promise<SongDetail | null> {
+  const notion = getNotionClient();
+  try {
+    const page = await notion.pages.retrieve({ page_id: id });
+    if (!("properties" in page)) return null;
+    const p = page as PageObjectResponse;
+    const base = pageToSong(p);
+
+    const chordProgression = getMultiSelectProperty(p, "コード進行");
+    const romanNumeral = getTextProperty(p, "進行ローマ数字") || undefined;
+    const era = getSelectProperty(p, "年代");
+
+    const artistIds = getRelationIds(p, "アーティスト");
+    let artistRelation: SongDetail["artistRelation"];
+    if (artistIds.length > 0) {
+      artistRelation = await resolveArtistName(notion, artistIds[0]);
+    }
+
+    return {
+      ...base,
+      chordProgression,
+      romanNumeral,
+      era,
+      artistRelation,
+    };
   } catch {
     return null;
   }

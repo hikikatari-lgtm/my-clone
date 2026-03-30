@@ -7,3 +7,13 @@ export interface Song {
   bpm?: number;
   artworkUrl?: string;
 }
+
+export interface SongDetail extends Song {
+  chordProgression: string[];
+  romanNumeral?: string;
+  era?: string;
+  artistRelation?: {
+    id: string;
+    name: string;
+  };
+}
