@@ -166,6 +166,10 @@ export async function fetchSongs(): Promise<Song[]> {
   do {
     const response: QueryDataSourceResponse = await notion.dataSources.query({
       data_source_id: DATA_SOURCE_ID,
+      filter: {
+        property: "✅ 確認済み",
+        checkbox: { equals: true },
+      },
       start_cursor: cursor,
       page_size: 100,
     });
