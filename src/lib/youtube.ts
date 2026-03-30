@@ -90,25 +90,34 @@ export async function fetchAllVideos(): Promise<{
   const key = getApiKey();
 
   // Fetch uploads playlist (all channel videos)
-  const channelRes = await fetch(
-    `${API_BASE}/channels?part=contentDetails&id=${CHANNEL_ID}&key=${key}`,
-    { next: { revalidate: 3600 } }
-  );
+  const channelUrl = `${API_BASE}/channels?part=contentDetails&id=${CHANNEL_ID}&key=${key}`;
+  console.log("[YouTube] Fetching channel:", CHANNEL_ID);
+  const channelRes = await fetch(channelUrl, { next: { revalidate: 3600 } });
+  console.log("[YouTube] Channel response status:", channelRes.status);
 
   let allVideos: Video[] = [];
-  const playlists = await fetchPlaylists();
 
   if (!channelRes.ok) {
     const errBody = await channelRes.text();
+    console.error("[YouTube] Channel API error body:", errBody);
     throw new Error(`YouTube channels API error ${channelRes.status}: ${errBody}`);
   }
 
   const channelData = await channelRes.json();
+  console.log("[YouTube] Channel data items:", channelData.items?.length ?? 0);
+  console.log("[YouTube] Channel response:", JSON.stringify(channelData, null, 2));
+
   const uploadsId =
     channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  console.log("[YouTube] Uploads playlist ID:", uploadsId ?? "(not found)");
+
   if (uploadsId) {
     allVideos = await fetchPlaylistVideos(uploadsId, "All Uploads");
+    console.log("[YouTube] Fetched upload videos:", allVideos.length);
   }
+
+  const playlists = await fetchPlaylists();
+  console.log("[YouTube] Fetched playlists:", playlists.length);
 
   // Map video IDs to playlist names from actual playlists
   const playlistVideoMap = new Map<string, string>();
