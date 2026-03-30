@@ -23,7 +23,7 @@ export default async function SongDetailPage({
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
       <Link
-        href="/"
+        href="/songs"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft className="size-4" />
