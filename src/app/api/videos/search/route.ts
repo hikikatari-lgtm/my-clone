@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       type: "video",
       channelId: CHANNEL_ID,
       q,
-      maxResults: "20",
+      maxResults: "50",
       key,
     });
 

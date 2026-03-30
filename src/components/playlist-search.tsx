@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlaylistCard } from "@/components/playlist-card";
@@ -50,69 +50,73 @@ export function PlaylistSearch({ playlists }: { playlists: Playlist[] }) {
     return result;
   }, [playlists, query, selectedCategory, searchResults]);
 
-  const doSearch = useCallback(async () => {
-    const q = query.trim();
-    if (!q) return;
+  const abortRef = useRef<AbortController | null>(null);
+
+  const doSearch = useCallback(async (q: string) => {
+    abortRef.current?.abort();
+    if (!q.trim()) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+    const controller = new AbortController();
+    abortRef.current = controller;
     setSearching(true);
     setSearchError(null);
     try {
       const res = await fetch(
-        `/api/videos/search?q=${encodeURIComponent(q)}`
+        `/api/videos/search?q=${encodeURIComponent(q.trim())}`,
+        { signal: controller.signal }
       );
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setSearchResults(data.results);
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       setSearchError(e instanceof Error ? e.message : "Search failed");
       setSearchResults(null);
     } finally {
       setSearching(false);
     }
-  }, [query]);
+  }, []);
+
+  // Debounced auto-search
+  useEffect(() => {
+    if (!query.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    const timer = setTimeout(() => doSearch(query), 300);
+    return () => clearTimeout(timer);
+  }, [query, doSearch]);
 
   const clearSearch = () => {
     setQuery("");
     setSearchResults(null);
     setSearchError(null);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") doSearch();
+    abortRef.current?.abort();
   };
 
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="relative flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              if (!e.target.value.trim()) clearSearch();
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="動画を検索（Enterで実行）..."
-            className="w-full rounded-lg border border-border bg-background pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-          />
-          {(query || searchResults) && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
-        <button
-          onClick={doSearch}
-          disabled={searching || !query.trim()}
-          className="shrink-0 rounded-lg bg-foreground text-background px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {searching ? "検索中..." : "検索"}
-        </button>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="動画・再生リストを検索..."
+          className="w-full rounded-lg border border-border bg-background pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+        />
+        {query && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
 
       {/* Error */}
@@ -123,7 +127,10 @@ export function PlaylistSearch({ playlists }: { playlists: Playlist[] }) {
       )}
 
       {/* Search results */}
-      {searchResults ? (
+      {searching && (
+        <p className="text-center text-muted-foreground py-8">検索中...</p>
+      )}
+      {!searching && searchResults ? (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             「{query}」の検索結果: {searchResults.length}件
