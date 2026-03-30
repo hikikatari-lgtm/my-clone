@@ -10,8 +10,9 @@ import type { SongDetail, NotionBlock } from "@/types/song";
 const tabs = [
   { key: "overview", label: "概要" },
   { key: "chords", label: "コード分析" },
+  { key: "lyrics", label: "歌詞" },
   { key: "sheets", label: "楽譜" },
-  { key: "videos", label: "動画" },
+  { key: "videos", label: "レッスン動画" },
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
@@ -30,12 +31,14 @@ export function SongTabs({ song, blocks }: SongTabsProps) {
 
   const hasImages = blocks.some((b) => b.type === "image");
   const hasVideos = blocks.some((b) => b.type === "video");
+  const hasParagraphs = blocks.some((b) => b.type === "paragraph" && b.paragraph?.rich_text.length);
 
   return (
     <div>
       {/* Tab bar */}
       <div className="flex border-b border-border mb-6 overflow-x-auto scrollbar-none">
         {tabs.map(({ key, label }) => {
+          if (key === "lyrics" && !hasParagraphs) return null;
           if (key === "sheets" && !hasImages) return null;
           if (key === "videos" && !hasVideos) return null;
           return (
@@ -176,14 +179,18 @@ export function SongTabs({ song, blocks }: SongTabsProps) {
             </div>
           )}
 
-          {/* Notion content (excluding images, videos, audio) */}
+          {/* Notion content (excluding images, videos, audio, paragraphs) */}
           {blocks.length > 0 && (
             <NotionRenderer
               blocks={blocks}
-              excludeTypes={["image", "video", "audio"]}
+              excludeTypes={["image", "video", "audio", "paragraph"]}
             />
           )}
         </div>
+      )}
+
+      {active === "lyrics" && (
+        <NotionRenderer blocks={blocks} onlyTypes={["paragraph"]} />
       )}
 
       {active === "sheets" && (
