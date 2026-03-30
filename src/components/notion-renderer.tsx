@@ -232,6 +232,19 @@ function BlockRenderer({ block }: { block: NotionBlock }) {
       );
     }
 
+    case "column_list": {
+      const columns = block.children?.filter((c) => c.type === "column") ?? [];
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+          {columns.map((col) => (
+            <div key={col.id}>
+              {col.children && <NotionRenderer blocks={col.children} />}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     default:
       return null;
   }

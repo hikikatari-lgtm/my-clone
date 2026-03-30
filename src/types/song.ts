@@ -62,6 +62,8 @@ export interface NotionBlock {
     file?: { url: string; expiry_time: string };
     external?: { url: string };
   };
+  column_list?: Record<string, never>;
+  column?: Record<string, never>;
   divider?: Record<string, never>;
   callout?: { rich_text: NotionRichText[]; icon?: { emoji?: string }; color: string };
   quote?: { rich_text: NotionRichText[]; color: string };

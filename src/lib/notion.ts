@@ -231,6 +231,18 @@ export async function fetchSongBlocks(pageId: string): Promise<NotionBlock[]> {
         b.children = children;
       }
 
+      // Fetch columns for column_list blocks
+      if (b.type === "column_list" && b.has_children) {
+        const columns = await fetchSongBlocks(b.id);
+        // Each column also has children
+        for (const col of columns) {
+          if (col.type === "column" && col.has_children) {
+            col.children = await fetchSongBlocks(col.id);
+          }
+        }
+        b.children = columns;
+      }
+
       blocks.push(b);
     }
 
