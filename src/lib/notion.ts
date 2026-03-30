@@ -78,6 +78,14 @@ function getRelationIds(page: PageObjectResponse, name: string): string[] {
   return [];
 }
 
+function getUrlProperty(page: PageObjectResponse, name: string): string | undefined {
+  const prop = page.properties[name];
+  if (prop?.type === "url" && prop.url) {
+    return prop.url;
+  }
+  return undefined;
+}
+
 function pageToSong(page: PageObjectResponse): Song {
   const genres = getMultiSelectProperty(page, "音楽ジャンル");
   return {
@@ -87,6 +95,7 @@ function pageToSong(page: PageObjectResponse): Song {
     genre: genres[0] ?? "Unknown",
     key: getSelectProperty(page, "Key"),
     bpm: getNumberProperty(page, "bpm"),
+    artworkUrl: getUrlProperty(page, "jacket_url"),
   };
 }
 

@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Music } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fetchArtwork } from "@/lib/itunes";
 import type { Song } from "@/types/song";
 
 const gradients = [
@@ -25,21 +24,8 @@ function getGradient(id: string) {
 }
 
 export function SongCard({ song }: { song: Song }) {
-  const [artworkUrl, setArtworkUrl] = useState<string | null>(
-    song.artworkUrl ?? null
-  );
+  const artworkUrl = song.artworkUrl ?? null;
   const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    if (song.artworkUrl) return;
-    let cancelled = false;
-    fetchArtwork(song.artist, song.title).then((url) => {
-      if (!cancelled) setArtworkUrl(url);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [song.artist, song.title, song.artworkUrl]);
 
   return (
     <Link
