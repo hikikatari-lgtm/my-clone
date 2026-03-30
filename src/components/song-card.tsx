@@ -24,7 +24,9 @@ function getGradient(id: string) {
 }
 
 export function SongCard({ song }: { song: Song }) {
-  const artworkUrl = song.artworkUrl ?? null;
+  const [artworkUrl, setArtworkUrl] = useState<string | null>(
+    song.artworkUrl ?? null
+  );
   const [loaded, setLoaded] = useState(false);
 
   return (
@@ -60,6 +62,7 @@ export function SongCard({ song }: { song: Song }) {
                 loaded ? "opacity-100" : "opacity-0"
               )}
               onLoad={() => setLoaded(true)}
+              onError={() => setArtworkUrl(null)}
             />
           </>
         ) : (
