@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, User } from "lucide-react";
-import { fetchSongDetailById } from "@/lib/notion";
+import { fetchSongDetailById, fetchSongBlocks } from "@/lib/notion";
+import { NotionRenderer } from "@/components/notion-renderer";
 import { SongArtwork } from "./song-artwork";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,10 @@ export default async function SongDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const song = await fetchSongDetailById(id);
+  const [song, blocks] = await Promise.all([
+    fetchSongDetailById(id),
+    fetchSongBlocks(id).catch(() => []),
+  ]);
 
   if (!song) notFound();
 
@@ -52,6 +56,16 @@ export default async function SongDetailPage({
             )}
           </div>
 
+          {/* AI Summary */}
+          {song.aiSummary && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
+              <p className="text-xs text-amber-700 font-medium mb-1">Point</p>
+              <p className="text-sm text-foreground leading-relaxed">
+                {song.aiSummary}
+              </p>
+            </div>
+          )}
+
           {/* Key / BPM / Era / Genre */}
           <div className="grid grid-cols-2 gap-3">
             {song.key && (
@@ -77,6 +91,25 @@ export default async function SongDetailPage({
               <p className="text-lg font-semibold text-orange-600">{song.genre}</p>
             </div>
           </div>
+
+          {/* Difficulty & Tags */}
+          {(song.difficulty || song.tags.length > 0) && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {song.difficulty && (
+                <span className="inline-block rounded-full bg-rose-500/15 text-rose-600 px-2.5 py-1 text-xs font-medium">
+                  {song.difficulty}
+                </span>
+              )}
+              {song.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-block rounded-full bg-slate-500/15 text-slate-600 px-2.5 py-1 text-xs font-medium"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Chord Progression (confirmed only) */}
           {song.confirmed && song.chordProgression.length > 0 && (
@@ -114,7 +147,7 @@ export default async function SongDetailPage({
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors"
             >
               <ExternalLink className="size-4" />
-              YouTube で検索
+              YouTube
             </a>
             <a
               href={spotifyUrl}
@@ -123,11 +156,18 @@ export default async function SongDetailPage({
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
             >
               <ExternalLink className="size-4" />
-              Spotify で検索
+              Spotify
             </a>
           </div>
         </div>
       </div>
+
+      {/* Page Content from Notion */}
+      {blocks.length > 0 && (
+        <section className="mt-10 border-t border-border pt-8">
+          <NotionRenderer blocks={blocks} />
+        </section>
+      )}
     </main>
   );
 }

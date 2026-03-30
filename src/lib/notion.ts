@@ -1,7 +1,7 @@
 import { Client } from "@notionhq/client";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints/common";
 import type { QueryDataSourceResponse } from "@notionhq/client/build/src/api-endpoints/data-sources";
-import type { Song, SongDetail } from "@/types/song";
+import type { Song, SongDetail, NotionBlock } from "@/types/song";
 
 const DATA_SOURCE_ID = "917e0b71-8fda-474c-8fba-9d751866e5dd";
 
@@ -147,6 +147,9 @@ export async function fetchSongDetailById(
     const chordProgression = getMultiSelectProperty(p, "コード進行");
     const romanNumeral = getTextProperty(p, "進行ローマ数字") || undefined;
     const era = getSelectProperty(p, "年代");
+    const aiSummary = getTextProperty(p, "AI要約（短）") || undefined;
+    const difficulty = getSelectProperty(p, "難易度");
+    const tags = getMultiSelectProperty(p, "タグ");
 
     const artistIds = getRelationIds(p, "アーティスト");
     let artistRelation: SongDetail["artistRelation"];
@@ -160,6 +163,9 @@ export async function fetchSongDetailById(
       chordProgression,
       romanNumeral,
       era,
+      aiSummary,
+      difficulty,
+      tags,
       artistRelation,
     };
   } catch {
@@ -195,4 +201,43 @@ export async function fetchSongs(): Promise<Song[]> {
   } while (cursor);
 
   return songs;
+}
+
+export async function fetchSongBlocks(pageId: string): Promise<NotionBlock[]> {
+  const notion = getNotionClient();
+  const blocks: NotionBlock[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const response = await notion.blocks.children.list({
+      block_id: pageId,
+      start_cursor: cursor,
+      page_size: 100,
+    });
+
+    for (const block of response.results) {
+      if (!("type" in block)) continue;
+      const b = block as unknown as NotionBlock;
+
+      // Fetch table rows for table blocks
+      if (b.type === "table" && b.has_children) {
+        const children = await fetchSongBlocks(b.id);
+        b.children = children;
+      }
+
+      // Fetch children for toggle blocks
+      if (b.type === "toggle" && b.has_children) {
+        const children = await fetchSongBlocks(b.id);
+        b.children = children;
+      }
+
+      blocks.push(b);
+    }
+
+    cursor = response.has_more
+      ? (response.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor);
+
+  return blocks;
 }
