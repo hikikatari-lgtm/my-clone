@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PlayCircle } from "lucide-react";
 import { episodes, getEpisodeByEp } from "@/lib/episodes";
 import { fetchSongBlocks } from "@/lib/notion";
 import { NotionRenderer } from "@/components/notion-renderer";
@@ -45,6 +45,17 @@ export default async function HistoryDetailPage({
         <span className="inline-block rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground mt-2">
           {ep.genre}
         </span>
+        <div className="mt-4">
+          <a
+            href={`https://www.notion.so/directline/${ep.pageId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors"
+          >
+            <PlayCircle className="size-5" />
+            Notionで動画を見る
+          </a>
+        </div>
       </div>
 
       {/* Content */}
