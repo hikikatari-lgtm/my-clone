@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -15,9 +14,9 @@ export function Nav() {
   return (
     <nav className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="mx-auto flex h-12 max-w-6xl items-center gap-6 px-4 sm:px-6">
-        <Link href="/" className="text-sm font-bold text-foreground">
+        <a href="/" className="text-sm font-bold text-foreground">
           Music Library
-        </Link>
+        </a>
         <div className="flex gap-4">
           {links.map(({ href, label }) => {
             const isActive =
@@ -25,7 +24,7 @@ export function Nav() {
                 ? pathname === "/"
                 : pathname.startsWith(href);
             return (
-              <Link
+              <a
                 key={href}
                 href={href}
                 className={cn(
@@ -36,7 +35,7 @@ export function Nav() {
                 )}
               >
                 {label}
-              </Link>
+              </a>
             );
           })}
         </div>
