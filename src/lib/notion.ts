@@ -88,6 +88,14 @@ function getUrlProperty(page: PageObjectResponse, name: string): string | undefi
   return undefined;
 }
 
+function getCoverUrl(page: PageObjectResponse): string | undefined {
+  const cover = page.cover;
+  if (!cover) return undefined;
+  if (cover.type === "external") return cover.external.url || undefined;
+  if (cover.type === "file") return cover.file.url || undefined;
+  return undefined;
+}
+
 function pageToSong(page: PageObjectResponse): Song {
   const genres = getMultiSelectProperty(page, "音楽ジャンル");
   return {
@@ -97,7 +105,7 @@ function pageToSong(page: PageObjectResponse): Song {
     genre: genres[0] ?? "Unknown",
     key: getSelectProperty(page, "Key"),
     bpm: getNumberProperty(page, "bpm"),
-    artworkUrl: getUrlProperty(page, "jacket_url"),
+    artworkUrl: getCoverUrl(page),
   };
 }
 

@@ -115,15 +115,20 @@ def fetch_confirmed_songs():
             if not artist:
                 artist = parsed_artist
 
-            # Current jacket_url
-            jacket_prop = props.get("jacket_url", {})
-            jacket_url = jacket_prop.get("url") if jacket_prop.get("type") == "url" else None
+            # Current cover image
+            cover = page.get("cover")
+            has_cover = False
+            if cover:
+                if cover.get("type") == "external" and cover.get("external", {}).get("url"):
+                    has_cover = True
+                elif cover.get("type") == "file" and cover.get("file", {}).get("url"):
+                    has_cover = True
 
             songs.append({
                 "page_id": page["id"],
                 "title": parsed_title,
                 "artist": artist,
-                "jacket_url": jacket_url,
+                "has_cover": has_cover,
             })
 
         if data.get("has_more") and data.get("next_cursor"):
@@ -157,11 +162,12 @@ def search_deezer(artist, title):
     return cover  # 500x500
 
 
-def update_jacket_url(page_id, url):
-    """Update the jacket_url property on a Notion page."""
+def update_cover(page_id, url):
+    """Set the page cover image on a Notion page."""
     notion_request("PATCH", f"pages/{page_id}", {
-        "properties": {
-            "jacket_url": {"url": url},
+        "cover": {
+            "type": "external",
+            "external": {"url": url},
         },
     })
 
@@ -188,7 +194,7 @@ def main():
             skipped += 1
             continue
 
-        if song["jacket_url"]:
+        if song["has_cover"]:
             print(f"{prefix} ALREADY SET: {title} / {artist}")
             already_set += 1
             continue
@@ -210,7 +216,7 @@ def main():
             updated += 1
         else:
             try:
-                update_jacket_url(song["page_id"], cover_url)
+                update_cover(song["page_id"], cover_url)
                 print(f"{prefix} UPDATED: {title} / {artist} → {cover_url}")
                 updated += 1
             except Exception as e:
