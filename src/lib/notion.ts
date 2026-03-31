@@ -537,6 +537,36 @@ export async function fetchAlbumsByArtistId(artistId: string): Promise<Album[]> 
   return albums;
 }
 
+export async function fetchSongsByAlbumId(albumId: string): Promise<Song[]> {
+  const notion = getNotionClient();
+
+  // Get song relation IDs from the album page
+  const albumPage = await notion.pages.retrieve({ page_id: albumId });
+  if (!("properties" in albumPage)) return [];
+  const p = albumPage as PageObjectResponse;
+  const songsProp = p.properties["Songs"];
+  if (songsProp?.type !== "relation") return [];
+  const songIds = songsProp.relation.map((r) => r.id);
+  if (songIds.length === 0) return [];
+
+  // Fetch each song page in parallel
+  const songs = await Promise.all(
+    songIds.map(async (id) => {
+      try {
+        const page = await notion.pages.retrieve({ page_id: id });
+        if ("properties" in page) {
+          return pageToSong(page as PageObjectResponse);
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return songs.filter((s): s is Song => s !== null);
+}
+
 export async function fetchSongsByArtistName(artistName: string): Promise<Song[]> {
   const notion = getNotionClient();
   const songs: Song[] = [];

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-Fetch album artwork URLs from Deezer API and update Notion's jacket_url property.
-Targets songs with ✅ 確認済み = true in the Song Library.
+Fetch album artwork URLs from Deezer API and update Notion pages.
+
+- Songs:  updates page cover for confirmed songs (Song Library)
+- Albums: updates jacket_url property for albums with empty jacket_url (Album DB)
 
 Usage:
-  python3 scripts/update_jacket_urls.py
-  python3 scripts/update_jacket_urls.py --dry-run   # preview without writing
+  python3 scripts/update_jacket_urls.py                # update songs only (default)
+  python3 scripts/update_jacket_urls.py --albums       # update albums only
+  python3 scripts/update_jacket_urls.py --all          # update both
+  python3 scripts/update_jacket_urls.py --dry-run      # preview without writing
 """
 
 import json
@@ -16,9 +20,11 @@ import urllib.parse
 import urllib.request
 
 # --- Config ---
-DATABASE_ID = "91723235-15df-47df-8bed-14f5ffa0f257"
+SONG_DATABASE_ID = "91723235-15df-47df-8bed-14f5ffa0f257"
+ALBUM_DATABASE_ID = "471aa704-6aa1-47cb-9d74-bcdfe8a15efc"
 NOTION_API_VERSION = "2022-06-28"
 DEEZER_SEARCH_URL = "https://api.deezer.com/search"
+DEEZER_SEARCH_ALBUM_URL = "https://api.deezer.com/search/album"
 
 # --- Load env ---
 def load_env():
@@ -71,7 +77,7 @@ def fetch_confirmed_songs():
         if start_cursor:
             body["start_cursor"] = start_cursor
 
-        data = notion_request("POST", f"databases/{DATABASE_ID}/query", body)
+        data = notion_request("POST", f"databases/{SONG_DATABASE_ID}/query", body)
 
         for page in data.get("results", []):
             if page.get("object") != "page":
@@ -172,9 +178,98 @@ def update_cover(page_id, url):
     })
 
 
-def main():
-    dry_run = "--dry-run" in sys.argv
+def fetch_albums_without_jacket():
+    """Fetch albums from Album DB where jacket_url is empty."""
+    albums = []
+    start_cursor = None
 
+    while True:
+        body = {
+            "filter": {
+                "property": "jacket_url",
+                "url": {"is_empty": True},
+            },
+            "page_size": 100,
+        }
+        if start_cursor:
+            body["start_cursor"] = start_cursor
+
+        data = notion_request("POST", f"databases/{ALBUM_DATABASE_ID}/query", body)
+
+        for page in data.get("results", []):
+            if page.get("object") != "page":
+                continue
+
+            props = page.get("properties", {})
+
+            # Album name (title property)
+            album_prop = props.get("Album", {})
+            album_name = ""
+            if album_prop.get("type") == "title":
+                album_name = "".join(t["plain_text"] for t in album_prop.get("title", []))
+
+            # Resolve artist from relation
+            artist = ""
+            artist_rel = props.get("Artist", {})
+            if artist_rel.get("type") == "relation" and artist_rel.get("relation"):
+                rel_id = artist_rel["relation"][0]["id"]
+                try:
+                    rel_page = notion_request("GET", f"pages/{rel_id}")
+                    for pv in rel_page.get("properties", {}).values():
+                        if pv.get("type") == "title":
+                            artist = "".join(t["plain_text"] for t in pv.get("title", []))
+                            break
+                except Exception:
+                    pass
+
+            albums.append({
+                "page_id": page["id"],
+                "album_name": album_name,
+                "artist": artist,
+            })
+
+        if data.get("has_more") and data.get("next_cursor"):
+            start_cursor = data["next_cursor"]
+        else:
+            break
+
+    return albums
+
+
+def search_deezer_album(artist, album_name):
+    """Search Deezer for an album and return cover_big URL."""
+    params = urllib.parse.urlencode({"q": f'artist:"{artist}" album:"{album_name}"'})
+    url = f"{DEEZER_SEARCH_ALBUM_URL}?{params}"
+    req = urllib.request.Request(url)
+    with urllib.request.urlopen(req) as res:
+        data = json.loads(res.read())
+    results = data.get("data", [])
+    # Fallback to simple search
+    if not results:
+        params = urllib.parse.urlencode({"q": f"{artist} {album_name}"})
+        url = f"{DEEZER_SEARCH_ALBUM_URL}?{params}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as res:
+            data = json.loads(res.read())
+        results = data.get("data", [])
+    if not results:
+        return None
+    return results[0].get("cover_big")
+
+
+def update_album_jacket_url(page_id, url):
+    """Set the jacket_url property on an Album page."""
+    notion_request("PATCH", f"pages/{page_id}", {
+        "properties": {
+            "jacket_url": {
+                "url": url,
+            },
+        },
+    })
+
+
+def run_songs(dry_run):
+    """Update cover images for confirmed songs."""
     print("Fetching confirmed songs from Notion...")
     songs = fetch_confirmed_songs()
     print(f"Found {len(songs)} confirmed songs\n")
@@ -223,15 +318,88 @@ def main():
                 print(f"{prefix} NOTION ERROR: {title} / {artist} — {e}")
                 skipped += 1
 
-        # Deezer rate limit: ~50 req/5s
         time.sleep(0.15)
 
-    print(f"\n--- Summary ---")
+    print(f"\n--- Songs Summary ---")
     print(f"Total:      {len(songs)}")
     print(f"Updated:    {updated}")
     print(f"Already set:{already_set}")
     print(f"Not found:  {not_found}")
     print(f"Skipped:    {skipped}")
+    return updated
+
+
+def run_albums(dry_run):
+    """Update jacket_url for albums missing it."""
+    print("Fetching albums without jacket_url from Notion...")
+    albums = fetch_albums_without_jacket()
+    print(f"Found {len(albums)} albums without jacket_url\n")
+
+    skipped = 0
+    updated = 0
+    not_found = 0
+
+    for i, album in enumerate(albums, 1):
+        name = album["album_name"]
+        artist = album["artist"]
+        prefix = f"[{i}/{len(albums)}]"
+
+        if not name:
+            print(f"{prefix} SKIP (missing album name): {name} / {artist}")
+            skipped += 1
+            continue
+
+        try:
+            cover_url = search_deezer_album(artist, name) if artist else None
+            # Fallback: search by album name only
+            if not cover_url:
+                cover_url = search_deezer_album("", name)
+        except Exception as e:
+            print(f"{prefix} DEEZER ERROR: {name} / {artist} — {e}")
+            skipped += 1
+            continue
+
+        if not cover_url:
+            print(f"{prefix} NOT FOUND: {name} / {artist}")
+            not_found += 1
+            continue
+
+        if dry_run:
+            print(f"{prefix} DRY RUN: {name} / {artist} → {cover_url}")
+            updated += 1
+        else:
+            try:
+                update_album_jacket_url(album["page_id"], cover_url)
+                print(f"{prefix} UPDATED: {name} / {artist} → {cover_url}")
+                updated += 1
+            except Exception as e:
+                print(f"{prefix} NOTION ERROR: {name} / {artist} — {e}")
+                skipped += 1
+
+        time.sleep(0.15)
+
+    print(f"\n--- Albums Summary ---")
+    print(f"Total:      {len(albums)}")
+    print(f"Updated:    {updated}")
+    print(f"Not found:  {not_found}")
+    print(f"Skipped:    {skipped}")
+    return updated
+
+
+def main():
+    dry_run = "--dry-run" in sys.argv
+    do_albums = "--albums" in sys.argv
+    do_all = "--all" in sys.argv
+    do_songs = not do_albums or do_all
+
+    if do_songs and not do_albums:
+        run_songs(dry_run)
+    elif do_albums and not do_all:
+        run_albums(dry_run)
+    elif do_all:
+        run_songs(dry_run)
+        print("\n" + "=" * 50 + "\n")
+        run_albums(dry_run)
 
 
 if __name__ == "__main__":
