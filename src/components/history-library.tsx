@@ -36,7 +36,6 @@ export function HistoryLibrary({ episodes }: { episodes: Episode[] }) {
 
   return (
     <div className="space-y-4">
-      {/* Genre filter */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none flex-wrap">
         <button
           onClick={() => setSelectedGenre(null)}
@@ -65,12 +64,10 @@ export function HistoryLibrary({ episodes }: { episodes: Episode[] }) {
         ))}
       </div>
 
-      {/* Count */}
       <p className="text-sm text-muted-foreground">
         {filtered.length} / {episodes.length} エピソード
       </p>
 
-      {/* List grid - Loom style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {filtered.map((ep) => {
           const tagColor = genreColors[ep.genre] ?? "bg-gray-100 text-gray-600";
@@ -88,6 +85,11 @@ export function HistoryLibrary({ episodes }: { episodes: Episode[] }) {
                   <h3 className="text-sm font-semibold text-foreground group-hover:text-blue-500 transition-colors leading-snug">
                     {ep.title}
                   </h3>
+                  {ep.artists && (
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      {ep.artists}
+                    </p>
+                  )}
                   <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium", tagColor)}>
                     {ep.genre}
                   </span>
