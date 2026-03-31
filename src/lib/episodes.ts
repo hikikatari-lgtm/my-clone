@@ -35,3 +35,7 @@ export const episodes: Episode[] = [
   { ep: 26, title: "男性ソウル・ヴォーカリスト", artists: "ライオネル・リッチー、マイケル・ボルトン", genre: "ソウルR&B", pageId: "67e9c40face04e0ca0c3f7d1b93c4b7a" },
   { ep: 27, title: "女性ロック", artists: "ハート、スージー・クアトロ、バングルス", genre: "メタルハード", pageId: "493dfc06616d44a68039b5e76be39153" },
 ];
+
+export function getEpisodeByEp(ep: number): Episode | undefined {
+  return episodes.find((e) => e.ep === ep);
+}
