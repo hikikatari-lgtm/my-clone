@@ -476,16 +476,8 @@ export async function fetchSongsByArtistName(artistName: string): Promise<Song[]
     const response: QueryDataSourceResponse = await notion.dataSources.query({
       data_source_id: DATA_SOURCE_ID,
       filter: {
-        and: [
-          {
-            property: "Artist (text)",
-            rich_text: { equals: artistName },
-          },
-          {
-            property: "✅ 確認済み",
-            checkbox: { equals: true },
-          },
-        ],
+        property: "Artist (text)",
+        rich_text: { equals: artistName },
       },
       start_cursor: cursor,
       page_size: 100,
