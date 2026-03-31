@@ -393,3 +393,76 @@ export async function fetchPlaylistsFromNotion(): Promise<Playlist[]> {
     isRecommended: item.isRecommended,
   }));
 }
+
+const ARTIST_DB_ID = "2bd08b31-57db-49e4-b9b9-815199e93c20";
+
+export interface Artist {
+  id: string;
+  name: string;
+  country?: string;
+  songCount: number;
+  imageUrl?: string;
+}
+
+export async function fetchArtists(): Promise<Artist[]> {
+  const artists: Artist[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const body: Record<string, unknown> = { page_size: 100 };
+    if (cursor) body.start_cursor = cursor;
+
+    const response = await notionPost(
+      `databases/${ARTIST_DB_ID}/query`,
+      body
+    );
+
+    for (const page of response.results ?? []) {
+      if (!page.properties) continue;
+      const props = page.properties;
+
+      const nameProp = props["Name"];
+      const name =
+        nameProp?.type === "title"
+          ? nameProp.title.map((t: { plain_text: string }) => t.plain_text).join("")
+          : "";
+
+      const countryProp = props["Country"];
+      const country =
+        countryProp?.type === "select" && countryProp.select
+          ? countryProp.select.name
+          : undefined;
+
+      const songCountProp = props["曲数"];
+      const songCount =
+        songCountProp?.type === "rollup" && songCountProp.rollup?.number != null
+          ? songCountProp.rollup.number
+          : 0;
+
+      // Cover image
+      const cover = page.cover;
+      let imageUrl: string | undefined;
+      if (cover?.type === "external") imageUrl = cover.external.url;
+      else if (cover?.type === "file") imageUrl = cover.file.url;
+
+      if (name) {
+        artists.push({
+          id: page.id,
+          name,
+          country,
+          songCount,
+          imageUrl,
+        });
+      }
+    }
+
+    cursor = response.has_more && response.next_cursor
+      ? response.next_cursor
+      : undefined;
+  } while (cursor);
+
+  // Sort by song count desc, then name asc
+  artists.sort((a, b) => b.songCount - a.songCount || a.name.localeCompare(b.name));
+
+  return artists;
+}
