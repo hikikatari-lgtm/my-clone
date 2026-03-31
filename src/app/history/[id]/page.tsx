@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, PlayCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { episodes, getEpisodeByEp } from "@/lib/episodes";
 import { fetchSongBlocks } from "@/lib/notion";
 import { NotionRenderer } from "@/components/notion-renderer";
@@ -18,65 +18,72 @@ export default async function HistoryDetailPage({
   if (!ep) notFound();
 
   const blocks = await fetchSongBlocks(ep.pageId).catch((e) => {
-    console.error(`[History] Failed to fetch blocks for ep.${ep.ep}:`, e instanceof Error ? e.message : e);
+    console.error(e);
     return [];
   });
 
-  // Previous / Next navigation
-  const prev = ep.ep > 1 ? getEpisodeByEp(ep.ep - 1) : undefined;
-  const next = ep.ep < episodes.length ? getEpisodeByEp(ep.ep + 1) : undefined;
+  const currentIndex = episodes.findIndex((e) => e.ep === ep.ep);
+  const prev = currentIndex > 0 ? episodes[currentIndex - 1] : null;
+  const next = currentIndex < episodes.length - 1 ? episodes[currentIndex + 1] : null;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+    <main className="max-w-2xl mx-auto px-4 py-8">
+      {/* 戻るボタン */}
       <Link
         href="/history"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft className="size-4" />
-        Back to History
+        Rock Legends
       </Link>
 
-      {/* Header */}
-      <div className="mb-8">
+      {/* ヘッダー */}
+      <div className="mb-6">
         <span className="text-sm text-muted-foreground">
           Episode {String(ep.ep).padStart(2, "0")}
         </span>
         <h1 className="text-2xl font-bold text-foreground mt-1">{ep.title}</h1>
+        {ep.artists && (
+          <p className="text-sm text-muted-foreground mt-1">{ep.artists}</p>
+        )}
         <span className="inline-block rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground mt-2">
           {ep.genre}
         </span>
-        <div className="mt-4">
-          <a
+      </div>
+
+      {/* Loom動画プレイヤー */}
+      {ep.loomId ? (
+        <div className="mb-8 rounded-xl overflow-hidden border border-border">
+          <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+            <iframe
+              src={`https://www.loom.com/embed/${ep.loomId}`}
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="mb-8">
+          
             href={`https://www.notion.so/directline/${ep.pageId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors"
           >
-            <PlayCircle className="size-5" />
             Notionで動画を見る
           </a>
         </div>
-      </div>
+      )}
 
-      {/* Content */}
-      {blocks.length > 0 ? (
-        <NotionRenderer
-          blocks={blocks}
-          excludeTypes={["image", "video", "audio", "file", "embed"]}
-        />
-      ) : (
-        <div className="text-center py-12 space-y-3">
-          <p className="text-muted-foreground">
-            コンテンツを読み込めませんでした
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Notionでこのページをインテグレーションに共有してください
-          </p>
+      {/* Notionコンテンツ */}
+      {blocks.length > 0 && (
+        <div className="prose prose-sm dark:prose-invert max-w-none mb-8">
+          <NotionRenderer blocks={blocks} />
         </div>
       )}
 
-      {/* Prev / Next */}
-      <div className="flex justify-between items-center border-t border-border mt-10 pt-6">
+      {/* 前後ナビゲーション */}
+      <div className="flex justify-between pt-6 border-t border-border">
         {prev ? (
           <Link
             href={`/history/${prev.ep}`}
