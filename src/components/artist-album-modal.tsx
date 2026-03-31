@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { X, Music, Loader2, Disc3, ArrowLeft, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { X, Music, Loader2, Disc3, ArrowLeft, ChevronRight } from "lucide-react";
 import type { Artist, Album } from "@/lib/notion";
 import type { Song } from "@/types/song";
-
-function notionPageUrl(pageId: string): string {
-  return `https://notion.so/${pageId.replace(/-/g, "")}`;
-}
 
 interface ArtistAlbumModalProps {
   artist: Artist;
@@ -207,11 +204,9 @@ export function ArtistAlbumModal({ artist, onClose }: ArtistAlbumModalProps) {
               {!songsLoading && !songsError && songs.length > 0 && (
                 <div className="flex flex-col gap-1">
                   {songs.map((song, index) => (
-                    <a
+                    <Link
                       key={song.id}
-                      href={notionPageUrl(song.id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`/songs/${song.id}`}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zinc-800/60 transition-colors group"
                     >
                       <span className="w-6 text-right text-xs text-zinc-500 tabular-nums shrink-0">
@@ -241,8 +236,8 @@ export function ArtistAlbumModal({ artist, onClose }: ArtistAlbumModalProps) {
                             .join(" · ")}
                         </p>
                       </div>
-                      <ExternalLink className="size-4 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                    </a>
+                      <ChevronRight className="size-4 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </Link>
                   ))}
                 </div>
               )}
