@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { User } from "lucide-react";
 import type { Artist } from "@/lib/notion";
 
@@ -22,14 +21,21 @@ const countryFlags: Record<string, string> = {
   "New Zealand": "🇳🇿",
 };
 
-export function ArtistCard({ artist }: { artist: Artist }) {
+export function ArtistCard({
+  artist,
+  onClick,
+}: {
+  artist: Artist;
+  onClick: () => void;
+}) {
   const [imgError, setImgError] = useState(false);
   const flag = artist.country ? countryFlags[artist.country] ?? "" : "";
 
   return (
-    <Link
-      href={`/artists/${artist.id}`}
-      className="group block rounded-xl overflow-hidden bg-card border border-border transition-all duration-200 ease-out hover:shadow-lg hover:-translate-y-1"
+    <button
+      type="button"
+      onClick={onClick}
+      className="group block w-full text-left rounded-xl overflow-hidden bg-card border border-border transition-all duration-200 ease-out hover:shadow-lg hover:-translate-y-1 cursor-pointer"
     >
       {/* Image */}
       <div className="aspect-square bg-muted relative">
@@ -66,6 +72,6 @@ export function ArtistCard({ artist }: { artist: Artist }) {
           )}
         </div>
       </div>
-    </Link>
+    </button>
   );
 }

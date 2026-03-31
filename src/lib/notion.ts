@@ -466,3 +466,41 @@ export async function fetchArtists(): Promise<Artist[]> {
 
   return artists;
 }
+
+export async function fetchSongsByArtistName(artistName: string): Promise<Song[]> {
+  const notion = getNotionClient();
+  const songs: Song[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const response: QueryDataSourceResponse = await notion.dataSources.query({
+      data_source_id: DATA_SOURCE_ID,
+      filter: {
+        and: [
+          {
+            property: "Artist (text)",
+            rich_text: { equals: artistName },
+          },
+          {
+            property: "✅ 確認済み",
+            checkbox: { equals: true },
+          },
+        ],
+      },
+      start_cursor: cursor,
+      page_size: 100,
+    });
+
+    for (const page of response.results) {
+      if ("properties" in page) {
+        songs.push(pageToSong(page as PageObjectResponse));
+      }
+    }
+
+    cursor = response.has_more
+      ? (response.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor);
+
+  return songs;
+}

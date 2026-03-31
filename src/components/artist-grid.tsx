@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { ArtistCard } from "@/components/artist-card";
+import { ArtistAlbumModal } from "@/components/artist-album-modal";
 import type { Artist } from "@/lib/notion";
 
 export function ArtistGrid({ artists }: { artists: Artist[] }) {
   const [query, setQuery] = useState("");
+  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return artists;
@@ -48,9 +50,21 @@ export function ArtistGrid({ artists }: { artists: Artist[] }) {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((artist) => (
-            <ArtistCard key={artist.id} artist={artist} />
+            <ArtistCard
+              key={artist.id}
+              artist={artist}
+              onClick={() => setSelectedArtist(artist)}
+            />
           ))}
         </div>
+      )}
+
+      {/* Modal */}
+      {selectedArtist && (
+        <ArtistAlbumModal
+          artist={selectedArtist}
+          onClose={() => setSelectedArtist(null)}
+        />
       )}
     </div>
   );
