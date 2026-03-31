@@ -467,6 +467,76 @@ export async function fetchArtists(): Promise<Artist[]> {
   return artists;
 }
 
+const ALBUM_DB_ID = "471aa704-6aa1-47cb-9d74-bcdfe8a15efc";
+
+export interface Album {
+  id: string;
+  name: string;
+  year?: number;
+  songCount: number;
+  coverUrl?: string;
+}
+
+export async function fetchAlbumsByArtistId(artistId: string): Promise<Album[]> {
+  const albums: Album[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const body: Record<string, unknown> = {
+      filter: {
+        property: "Artist",
+        relation: { contains: artistId },
+      },
+      page_size: 100,
+    };
+    if (cursor) body.start_cursor = cursor;
+
+    const response = await notionPost(
+      `databases/${ALBUM_DB_ID}/query`,
+      body
+    );
+
+    for (const page of response.results ?? []) {
+      if (!page.properties) continue;
+      const props = page.properties;
+
+      const nameProp = props["Album"];
+      const name =
+        nameProp?.type === "title"
+          ? nameProp.title.map((t: { plain_text: string }) => t.plain_text).join("")
+          : "";
+
+      const yearProp = props["Year"];
+      const year =
+        yearProp?.type === "number" && yearProp.number !== null
+          ? yearProp.number
+          : undefined;
+
+      const songsProp = props["Songs"];
+      const songCount =
+        songsProp?.type === "relation" ? songsProp.relation.length : 0;
+
+      const cover = page.cover;
+      let coverUrl: string | undefined;
+      if (cover?.type === "external") coverUrl = cover.external.url;
+      else if (cover?.type === "file") coverUrl = cover.file.url;
+
+      if (name) {
+        albums.push({ id: page.id, name, year, songCount, coverUrl });
+      }
+    }
+
+    cursor = response.has_more && response.next_cursor
+      ? response.next_cursor
+      : undefined;
+  } while (cursor);
+
+  // Sort by year desc, then name asc
+  albums.sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || a.name.localeCompare(b.name));
+
+  return albums;
+}
+
 export async function fetchSongsByArtistName(artistName: string): Promise<Song[]> {
   const notion = getNotionClient();
   const songs: Song[] = [];
