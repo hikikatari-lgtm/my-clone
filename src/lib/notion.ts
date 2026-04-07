@@ -632,25 +632,25 @@ function pageToNovel(page: PageObjectResponse): Novel {
 }
 
 export async function fetchNovels(): Promise<Novel[]> {
-  const notion = getNotionClient();
   const novels: Novel[] = [];
   let cursor: string | undefined;
 
   do {
-    const response: QueryDataSourceResponse = await notion.dataSources.query({
-      data_source_id: NOVEL_LIBRARY_DB_ID,
-      start_cursor: cursor,
-      page_size: 100,
-    });
+    const body: Record<string, unknown> = { page_size: 100 };
+    if (cursor) body.start_cursor = cursor;
 
-    for (const page of response.results) {
-      if ("properties" in page) {
-        novels.push(pageToNovel(page as PageObjectResponse));
-      }
+    const response = await notionPost(
+      `databases/${NOVEL_LIBRARY_DB_ID}/query`,
+      body
+    );
+
+    for (const page of response.results ?? []) {
+      if (!page.properties) continue;
+      novels.push(pageToNovel(page as PageObjectResponse));
     }
 
-    cursor = response.has_more
-      ? (response.next_cursor ?? undefined)
+    cursor = response.has_more && response.next_cursor
+      ? response.next_cursor
       : undefined;
   } while (cursor);
 
