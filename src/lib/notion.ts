@@ -615,10 +615,18 @@ export interface Novel {
   notionUrl: string;
 }
 
+function getNovelTitle(page: PageObjectResponse): string {
+  const prop = page.properties["タイトル"];
+  if (prop?.type === "title") {
+    return prop.title.map((t) => t.plain_text).join("");
+  }
+  return "";
+}
+
 function pageToNovel(page: PageObjectResponse): Novel {
   return {
     id: page.id,
-    title: getTitleProperty(page),
+    title: getNovelTitle(page),
     author: getTextProperty(page, "著者"),
     genre: getSelectProperty(page, "ジャンル") ?? "",
     themes: getMultiSelectProperty(page, "テーマ"),
