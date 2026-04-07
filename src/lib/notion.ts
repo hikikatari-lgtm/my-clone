@@ -596,3 +596,63 @@ export async function fetchSongsByArtistName(artistName: string): Promise<Song[]
 
   return songs;
 }
+
+// ─── Novel Library DB ───
+
+const NOVEL_LIBRARY_DB_ID = "ff0b12fd-a787-4160-a422-3a46cd4ec2b7";
+
+export interface Novel {
+  id: string;
+  title: string;
+  author: string;
+  genre: string;
+  themes: string[];
+  difficulty: string;
+  completed: boolean;
+  synopsis: string;
+  creativeMemo: string;
+  lessonUsage: string;
+  notionUrl: string;
+}
+
+function pageToNovel(page: PageObjectResponse): Novel {
+  return {
+    id: page.id,
+    title: getTitleProperty(page),
+    author: getTextProperty(page, "著者"),
+    genre: getSelectProperty(page, "ジャンル") ?? "",
+    themes: getMultiSelectProperty(page, "テーマ"),
+    difficulty: getSelectProperty(page, "文体・難易度") ?? "",
+    completed: getCheckboxProperty(page, "✅ 読了"),
+    synopsis: getTextProperty(page, "あらすじ"),
+    creativeMemo: getTextProperty(page, "歌詞・創作メモ"),
+    lessonUsage: getTextProperty(page, "レッスン活用"),
+    notionUrl: page.url,
+  };
+}
+
+export async function fetchNovels(): Promise<Novel[]> {
+  const notion = getNotionClient();
+  const novels: Novel[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const response: QueryDataSourceResponse = await notion.dataSources.query({
+      data_source_id: NOVEL_LIBRARY_DB_ID,
+      start_cursor: cursor,
+      page_size: 100,
+    });
+
+    for (const page of response.results) {
+      if ("properties" in page) {
+        novels.push(pageToNovel(page as PageObjectResponse));
+      }
+    }
+
+    cursor = response.has_more
+      ? (response.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor);
+
+  return novels;
+}
