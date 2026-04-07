@@ -9,6 +9,7 @@ const links = [
   { href: "/artists", label: "Artists" },
   { href: "/novels", label: "📖 Novels" },
   { href: "/english", label: "📚 English" },
+  { href: "/movies", label: "🎬 Movies" },
   { href: "/history", label: "History" },
 ];
 

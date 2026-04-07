@@ -734,3 +734,81 @@ export async function fetchEnglishMaterials(): Promise<EnglishMaterial[]> {
 
   return materials;
 }
+
+// ─── Movie Library DB ───
+
+const MOVIE_LIBRARY_DB_ID = "83041d3664f747bcb8ccc677da1ba20d";
+
+export interface Movie {
+  id: string;
+  title: string;
+  director: string;
+  year: number | null;
+  country: string;
+  cast: string;
+  genres: string[];
+  rating: string;
+  watched: boolean;
+  originalTitle: string;
+  synopsis: string;
+  memo: string;
+  lessonUsage: string;
+  music: string;
+  wikipediaUrl: string;
+  notionUrl: string;
+}
+
+function getMovieTitle(page: PageObjectResponse): string {
+  const prop = page.properties["タイトル"];
+  if (prop?.type === "title") {
+    return prop.title.map((t) => t.plain_text).join("");
+  }
+  return "";
+}
+
+function pageToMovie(page: PageObjectResponse): Movie {
+  return {
+    id: page.id,
+    title: getMovieTitle(page),
+    director: getTextProperty(page, "監督"),
+    year: getNumberProperty(page, "公開年") ?? null,
+    country: getTextProperty(page, "製作国"),
+    cast: getTextProperty(page, "主要キャスト"),
+    genres: getMultiSelectProperty(page, "ジャンル"),
+    rating: getSelectProperty(page, "⭐ 評価") ?? "",
+    watched: getCheckboxProperty(page, "✅ 鑑賞済み"),
+    originalTitle: getTextProperty(page, "原題"),
+    synopsis: getTextProperty(page, "あらすじ"),
+    memo: getTextProperty(page, "個人メモ"),
+    lessonUsage: getTextProperty(page, "レッスン活用"),
+    music: getTextProperty(page, "音楽"),
+    wikipediaUrl: getUrlProperty(page, "Wikipedia URL") ?? "",
+    notionUrl: page.url,
+  };
+}
+
+export async function fetchMovies(): Promise<Movie[]> {
+  const movies: Movie[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const body: Record<string, unknown> = { page_size: 100 };
+    if (cursor) body.start_cursor = cursor;
+
+    const response = await notionPost(
+      `databases/${MOVIE_LIBRARY_DB_ID}/query`,
+      body
+    );
+
+    for (const page of response.results ?? []) {
+      if (!page.properties) continue;
+      movies.push(pageToMovie(page as PageObjectResponse));
+    }
+
+    cursor = response.has_more && response.next_cursor
+      ? response.next_cursor
+      : undefined;
+  } while (cursor);
+
+  return movies;
+}
