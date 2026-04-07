@@ -64,7 +64,7 @@ export default async function HistoryDetailPage({
         </div>
       ) : (
         <div className="mb-8">
-          
+          <a
             href={`https://www.notion.so/directline/${ep.pageId}`}
             target="_blank"
             rel="noopener noreferrer"

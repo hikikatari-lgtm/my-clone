@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAlbumsByArtist } from "@/lib/notion";
+import { fetchAlbumsByArtistId } from "@/lib/notion";
 
 export async function GET(
   _request: Request,
@@ -8,7 +8,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const albums = await getAlbumsByArtist(id);
+    const albums = await fetchAlbumsByArtistId(id);
     return NextResponse.json(albums);
   } catch (e) {
     console.error("Failed to fetch albums:", e);
