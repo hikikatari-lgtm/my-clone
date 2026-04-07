@@ -664,3 +664,73 @@ export async function fetchNovels(): Promise<Novel[]> {
 
   return novels;
 }
+
+// ─── English Library DB ───
+
+const ENGLISH_LIBRARY_DB_ID = "1317277363c840ef9719944dafe4acd6";
+
+export interface EnglishMaterial {
+  id: string;
+  title: string;
+  categories: string[];
+  level: string;
+  formats: string[];
+  language: string;
+  publisher: string;
+  inUse: boolean;
+  summary: string;
+  memo: string;
+  driveUrl: string;
+  notionUrl: string;
+}
+
+function getEnglishTitle(page: PageObjectResponse): string {
+  const prop = page.properties["タイトル"];
+  if (prop?.type === "title") {
+    return prop.title.map((t) => t.plain_text).join("");
+  }
+  return "";
+}
+
+function pageToEnglishMaterial(page: PageObjectResponse): EnglishMaterial {
+  return {
+    id: page.id,
+    title: getEnglishTitle(page),
+    categories: getMultiSelectProperty(page, "カテゴリ"),
+    level: getSelectProperty(page, "レベル") ?? "",
+    formats: getMultiSelectProperty(page, "フォーマット"),
+    language: getSelectProperty(page, "言語") ?? "",
+    publisher: getSelectProperty(page, "出版社") ?? "",
+    inUse: getCheckboxProperty(page, "✅ レッスン使用中"),
+    summary: getTextProperty(page, "Gemini要約"),
+    memo: getTextProperty(page, "メモ"),
+    driveUrl: getUrlProperty(page, "Google Drive URL") ?? "",
+    notionUrl: page.url,
+  };
+}
+
+export async function fetchEnglishMaterials(): Promise<EnglishMaterial[]> {
+  const materials: EnglishMaterial[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const body: Record<string, unknown> = { page_size: 100 };
+    if (cursor) body.start_cursor = cursor;
+
+    const response = await notionPost(
+      `databases/${ENGLISH_LIBRARY_DB_ID}/query`,
+      body
+    );
+
+    for (const page of response.results ?? []) {
+      if (!page.properties) continue;
+      materials.push(pageToEnglishMaterial(page as PageObjectResponse));
+    }
+
+    cursor = response.has_more && response.next_cursor
+      ? response.next_cursor
+      : undefined;
+  } while (cursor);
+
+  return materials;
+}

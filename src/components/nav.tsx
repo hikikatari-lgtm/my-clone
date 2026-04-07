@@ -8,6 +8,7 @@ const links = [
   { href: "/videos", label: "Videos" },
   { href: "/artists", label: "Artists" },
   { href: "/novels", label: "📖 Novels" },
+  { href: "/english", label: "📚 English" },
   { href: "/history", label: "History" },
 ];
 
