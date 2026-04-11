@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dante's Peak - English Reader (Penguin Readers Level 2)</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#121212;--surface:#1e1e1e;--surface2:#2a2a2a;--surface3:#333;
+    --text:#e0e0e0;--text2:#aaa;--accent:#f0a500;--accent2:#ff6b35;
+    --vocab:#4fc3f7;--sidebar-w:280px;
+  }
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.8;display:flex;min-height:100vh}
+  /* Sidebar */
+  .sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--surface3);position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100;transition:transform .3s}
+  .sidebar-header{padding:20px;border-bottom:1px solid var(--surface3);text-align:center}
+  .sidebar-header h2{color:var(--accent);font-size:1.1rem}
+  .sidebar-header .level{display:inline-block;margin-top:6px;padding:2px 10px;border-radius:12px;background:var(--accent2);color:#fff;font-size:.75rem;font-weight:600}
+  .sidebar nav{padding:10px 0}
+  .sidebar nav a{display:block;padding:10px 20px;color:var(--text2);text-decoration:none;font-size:.9rem;border-left:3px solid transparent;transition:all .2s}
+  .sidebar nav a:hover,.sidebar nav a.active{color:var(--accent);background:var(--surface2);border-left-color:var(--accent)}
+  .sidebar nav a .ch-num{display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;background:var(--surface3);color:var(--text2);font-size:.75rem;margin-right:8px}
+  .sidebar nav a:hover .ch-num,.sidebar nav a.active .ch-num{background:var(--accent);color:#000}
+  /* Toggle */
+  .sidebar-toggle{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface2);border:1px solid var(--surface3);color:var(--accent);width:40px;height:40px;border-radius:8px;font-size:1.3rem;cursor:pointer}
+  /* Main */
+  .main{margin-left:var(--sidebar-w);flex:1;max-width:800px;padding:40px 40px 80px}
+  .hero{text-align:center;margin-bottom:48px;padding:40px 20px;background:linear-gradient(135deg,#1a1000 0%,#2d1600 50%,#1a0a00 100%);border-radius:16px;border:1px solid var(--surface3)}
+  .hero h1{font-size:2.2rem;color:var(--accent);margin-bottom:8px;letter-spacing:1px}
+  .hero .subtitle{color:var(--text2);font-size:1rem}
+  .hero .tags{margin-top:14px}
+  .hero .tags span{display:inline-block;margin:4px;padding:3px 12px;border-radius:12px;font-size:.75rem;background:var(--surface2);color:var(--text2);border:1px solid var(--surface3)}
+  /* Chapter */
+  .chapter{margin-bottom:56px;scroll-margin-top:24px}
+  .chapter-title{font-size:1.4rem;color:var(--accent);margin-bottom:6px;padding-bottom:8px;border-bottom:2px solid var(--surface3)}
+  .chapter-title .num{color:var(--accent2)}
+  .chapter-intro{color:var(--text2);font-size:.85rem;margin-bottom:16px;font-style:italic}
+  .chapter p{margin-bottom:14px;font-size:1.05rem}
+  /* Vocab word */
+  .vocab{color:var(--vocab);cursor:pointer;border-bottom:1px dashed var(--vocab);position:relative;transition:color .2s}
+  .vocab:hover{color:#81d4fa}
+  /* Popup */
+  .popup{display:none;position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);width:280px;background:var(--surface);border:1px solid var(--vocab);border-radius:10px;padding:14px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+  .popup::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top-color:var(--vocab)}
+  .popup.show{display:block}
+  .popup .word{font-weight:700;color:var(--vocab);font-size:1rem}
+  .popup .pos{color:var(--accent2);font-size:.75rem;margin-left:6px}
+  .popup .pron{color:var(--text2);font-size:.8rem;display:block;margin:2px 0 6px}
+  .popup .def{font-size:.88rem;color:var(--text);margin-bottom:4px}
+  .popup .def-ja{font-size:.82rem;color:var(--text2)}
+  .popup .example{font-size:.82rem;color:var(--text2);margin-top:6px;padding-top:6px;border-top:1px solid var(--surface3);font-style:italic}
+  /* Vocab list */
+  .vocab-section{background:var(--surface);border-radius:12px;padding:20px 24px;margin-top:20px;border:1px solid var(--surface3)}
+  .vocab-section h3{color:var(--accent);font-size:1rem;margin-bottom:12px}
+  .vocab-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .vocab-card{background:var(--surface2);border-radius:8px;padding:10px 14px}
+  .vocab-card .vw{color:var(--vocab);font-weight:600;font-size:.95rem}
+  .vocab-card .vd{color:var(--text2);font-size:.82rem;margin-top:2px}
+  /* Comprehension */
+  .quiz{background:var(--surface);border-radius:12px;padding:20px 24px;margin-top:20px;border:1px solid var(--surface3)}
+  .quiz h3{color:var(--accent2);font-size:1rem;margin-bottom:12px}
+  .quiz ol{padding-left:20px}
+  .quiz li{margin-bottom:8px;font-size:.95rem;color:var(--text2)}
+  .quiz .answer{display:none;color:var(--accent);font-size:.85rem;margin-top:2px}
+  .quiz li.revealed .answer{display:block}
+  .quiz li{cursor:pointer}
+  .quiz li::marker{color:var(--accent2)}
+  /* Progress */
+  .progress-bar{position:fixed;top:0;left:var(--sidebar-w);right:0;height:3px;z-index:150;background:var(--surface2)}
+  .progress-bar .fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+  /* Responsive */
+  @media(max-width:768px){
+    .sidebar{transform:translateX(-100%)}
+    .sidebar.open{transform:translateX(0)}
+    .sidebar-toggle{display:block}
+    .main{margin-left:0;padding:24px 20px 60px}
+    .progress-bar{left:0}
+    .popup{width:240px}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+
+<button class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h2>Dante's Peak</h2>
+    <span class="level">Penguin Readers Level 2</span>
+  </div>
+  <nav id="sidebarNav">
+    <a href="#intro"><span class="ch-num">0</span>Introduction</a>
+    <a href="#ch1"><span class="ch-num">1</span>A New Beginning</a>
+    <a href="#ch2"><span class="ch-num">2</span>Warning Signs</a>
+    <a href="#ch3"><span class="ch-num">3</span>The Investigation</a>
+    <a href="#ch4"><span class="ch-num">4</span>Nobody Listens</a>
+    <a href="#ch5"><span class="ch-num">5</span>The Mountain Wakes</a>
+    <a href="#ch6"><span class="ch-num">6</span>Escape</a>
+    <a href="#ch7"><span class="ch-num">7</span>The Eruption</a>
+    <a href="#ch8"><span class="ch-num">8</span>Survival</a>
+    <a href="#ch9"><span class="ch-num">9</span>After the Disaster</a>
+    <a href="#vocablist">Vocabulary List</a>
+  </nav>
+</aside>
+
+<main class="main">
+
+  <div class="hero">
+    <h1>Dante's Peak</h1>
+    <div class="subtitle">Penguin Readers Level 2 (600 headwords)</div>
+    <div class="tags">
+      <span>Adventure</span><span>Disaster</span><span>Nature</span><span>Based on the 1997 film</span>
+    </div>
+  </div>
+
+  <!-- Introduction -->
+  <section class="chapter" id="intro">
+    <h2 class="chapter-title"><span class="num">Introduction</span></h2>
+    <p class="chapter-intro">Background information about the story</p>
+    <p><span class="vocab" data-word="volcano" data-pos="noun" data-pron="/vɒlˈkeɪnoʊ/" data-def="A mountain that can explode and send out hot rock and fire" data-ja="火山" data-ex="There are many volcanoes in Japan.">Volcanoes</span> are some of the most powerful and dangerous things in nature. When a volcano <span class="vocab" data-word="erupt" data-pos="verb" data-pron="/ɪˈrʌpt/" data-def="When a volcano explodes and sends out fire and hot rock" data-ja="噴火する" data-ex="The volcano erupted without warning.">erupts</span>, it can destroy everything around it.</p>
+    <p>This is the story of Harry Dalton, a <span class="vocab" data-word="volcanologist" data-pos="noun" data-pron="/ˌvɒlkəˈnɒlədʒɪst/" data-def="A scientist who studies volcanoes" data-ja="火山学者" data-ex="The volcanologist watched the mountain carefully.">volcanologist</span> who works for the United States <span class="vocab" data-word="geological" data-pos="adjective" data-pron="/ˌdʒiːəˈlɒdʒɪkəl/" data-def="Related to the study of rocks and the earth" data-ja="地質学の" data-ex="They did a geological survey of the area.">Geological</span> Survey. He travels to a small town called Dante's Peak in the mountains of Washington State. The town is beautiful and <span class="vocab" data-word="peaceful" data-pos="adjective" data-pron="/ˈpiːsfəl/" data-def="Quiet and calm, without problems" data-ja="平和な" data-ex="It was a peaceful morning by the lake.">peaceful</span>, but there is a big mountain above it &mdash; and the mountain is a volcano.</p>
+
+    <div class="quiz">
+      <h3>Before You Read</h3>
+      <ol>
+        <li>What do you know about volcanoes? <span class="answer">Think about famous eruptions you have heard about.</span></li>
+        <li>Would you like to live near a volcano? Why or why not? <span class="answer">There is no right answer &mdash; think about the risks and the beauty.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 1 -->
+  <section class="chapter" id="ch1">
+    <h2 class="chapter-title"><span class="num">Chapter 1 &mdash;</span> A New Beginning</h2>
+    <p class="chapter-intro">Harry Dalton arrives in Dante's Peak</p>
+    <p>Harry Dalton drove his truck into the small town of Dante's Peak. It was a beautiful place. The town was in a <span class="vocab" data-word="valley" data-pos="noun" data-pron="/ˈvæli/" data-def="A low area of land between hills or mountains" data-ja="谷" data-ex="The river runs through the valley.">valley</span> between tall mountains, and there was a big <span class="vocab" data-word="lake" data-pos="noun" data-pron="/leɪk/" data-def="A large area of water with land around it" data-ja="湖" data-ex="They went swimming in the lake.">lake</span> nearby. The people in the town were friendly and happy.</p>
+    <p>Harry was a volcanologist. His job was to study volcanoes and tell people when a volcano was going to erupt. Four years ago, he was in Colombia when a volcano erupted. His <span class="vocab" data-word="partner" data-pos="noun" data-pron="/ˈpɑːrtnər/" data-def="A person you work with or have a close relationship with" data-ja="パートナー、相棒" data-ex="She and her partner worked on the project together.">partner</span>, Marianne, died in the <span class="vocab" data-word="eruption" data-pos="noun" data-pron="/ɪˈrʌpʃən/" data-def="When a volcano sends out fire, hot rock, and gas" data-ja="噴火" data-ex="The eruption destroyed several villages.">eruption</span>. Harry was very sad after that.</p>
+    <p>Now he was in Dante's Peak because his boss, Paul Dreyfus, sent him there. There were some <span class="vocab" data-word="signs" data-pos="noun" data-pron="/saɪnz/" data-def="Things that show something is happening or will happen" data-ja="兆候" data-ex="There were signs of a coming storm.">signs</span> that the volcano above the town might be waking up.</p>
+    <p>Harry met Rachel Wando, the <span class="vocab" data-word="mayor" data-pos="noun" data-pron="/meər/" data-def="The leader of a town or city" data-ja="市長" data-ex="The mayor gave a speech to the people.">mayor</span> of Dante's Peak. She was a strong and kind woman with two children, Graham and Lauren. The town had just won the prize for the second-best small town in America, and everyone was very proud.</p>
+    <p>&ldquo;Welcome to Dante's Peak,&rdquo; Rachel said. &ldquo;It's a wonderful place to live.&rdquo;</p>
+    <p>Harry smiled, but he was worried. He looked up at the big mountain and thought, <em>&ldquo;I hope I'm wrong about this.&rdquo;</em></p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">valley</div><div class="vd">谷 &mdash; low land between mountains</div></div>
+        <div class="vocab-card"><div class="vw">eruption</div><div class="vd">噴火 &mdash; when a volcano explodes</div></div>
+        <div class="vocab-card"><div class="vw">mayor</div><div class="vd">市長 &mdash; leader of a town</div></div>
+        <div class="vocab-card"><div class="vw">signs</div><div class="vd">兆候 &mdash; things that show something</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>Why did Harry come to Dante's Peak? <span class="answer">His boss sent him because there were signs that the volcano might erupt.</span></li>
+        <li>What happened to Harry in Colombia? <span class="answer">His partner Marianne died in a volcanic eruption.</span></li>
+        <li>Who is Rachel Wando? <span class="answer">She is the mayor of Dante's Peak and has two children.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 2 -->
+  <section class="chapter" id="ch2">
+    <h2 class="chapter-title"><span class="num">Chapter 2 &mdash;</span> Warning Signs</h2>
+    <p class="chapter-intro">Strange things begin to happen near the mountain</p>
+    <p>The next day, Harry and Rachel went up the mountain together. Harry wanted to look at the <span class="vocab" data-word="hot springs" data-pos="noun" data-pron="/hɒt sprɪŋz/" data-def="Places where hot water comes up from under the ground" data-ja="温泉" data-ex="They relaxed in the natural hot springs.">hot springs</span> near the top. When they got to one of the springs, they found something terrible. Two people were dead in the water. The water was too hot &mdash; it had <span class="vocab" data-word="boiled" data-pos="verb" data-pron="/bɔɪld/" data-def="Heated water until it reaches 100°C and makes bubbles" data-ja="沸騰した" data-ex="The water boiled in the pot.">boiled</span> them.</p>
+    <p>&ldquo;This is not normal,&rdquo; Harry said. &ldquo;The water is much hotter than it should be. Something is happening under the mountain.&rdquo;</p>
+    <p>Harry checked the water in the <span class="vocab" data-word="river" data-pos="noun" data-pron="/ˈrɪvər/" data-def="A long, natural flow of water" data-ja="川" data-ex="The children played by the river.">river</span> near the town. The water had too much <span class="vocab" data-word="acid" data-pos="noun" data-pron="/ˈæsɪd/" data-def="A strong chemical that can burn or destroy things" data-ja="酸" data-ex="The acid burned through the metal.">acid</span> in it. The fish in the river were dying. There were also small <span class="vocab" data-word="earthquakes" data-pos="noun" data-pron="/ˈɜːrθkweɪks/" data-def="When the ground shakes suddenly" data-ja="地震" data-ex="Japan has many earthquakes every year.">earthquakes</span> &mdash; too small for most people to feel, but Harry's <span class="vocab" data-word="instruments" data-pos="noun" data-pron="/ˈɪnstrəmənts/" data-def="Tools or machines used for measuring things" data-ja="計器" data-ex="The scientist checked the instruments every hour.">instruments</span> could find them.</p>
+    <p>Harry told Rachel, &ldquo;I think the volcano is becoming active again. We need to <span class="vocab" data-word="warn" data-pos="verb" data-pron="/wɔːrn/" data-def="To tell someone about a danger" data-ja="警告する" data-ex="The police warned people to stay inside.">warn</span> the people.&rdquo;</p>
+    <p>Rachel was worried, but she also thought about the town. If people heard about the volcano, they would be afraid. Businesses might close. People might leave. She needed to think carefully about what to do.</p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">hot springs</div><div class="vd">温泉 &mdash; naturally hot water</div></div>
+        <div class="vocab-card"><div class="vw">acid</div><div class="vd">酸 &mdash; chemical that burns</div></div>
+        <div class="vocab-card"><div class="vw">earthquakes</div><div class="vd">地震 &mdash; ground shaking</div></div>
+        <div class="vocab-card"><div class="vw">instruments</div><div class="vd">計器 &mdash; measuring tools</div></div>
+        <div class="vocab-card"><div class="vw">warn</div><div class="vd">警告する &mdash; tell about danger</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>What did Harry and Rachel find at the hot springs? <span class="answer">They found two dead people. The water was too hot.</span></li>
+        <li>What was wrong with the river water? <span class="answer">It had too much acid in it and the fish were dying.</span></li>
+        <li>Why was Rachel worried about telling people? <span class="answer">She was afraid people would leave and businesses would close.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 3 -->
+  <section class="chapter" id="ch3">
+    <h2 class="chapter-title"><span class="num">Chapter 3 &mdash;</span> The Investigation</h2>
+    <p class="chapter-intro">Harry's team comes to study the volcano</p>
+    <p>Harry called his boss, Paul Dreyfus, and asked him to send a team. Paul came with several other scientists and a lot of <span class="vocab" data-word="equipment" data-pos="noun" data-pron="/ɪˈkwɪpmənt/" data-def="The tools and machines needed for a job" data-ja="装備、機器" data-ex="They brought all their equipment to the mountain.">equipment</span>. They put instruments all around the mountain to <span class="vocab" data-word="measure" data-pos="verb" data-pron="/ˈmeʒər/" data-def="To find the size, amount, or level of something" data-ja="測定する" data-ex="We need to measure the temperature of the water.">measure</span> earthquakes, <span class="vocab" data-word="temperature" data-pos="noun" data-pron="/ˈtemprətʃər/" data-def="How hot or cold something is" data-ja="温度" data-ex="The temperature is 30 degrees today.">temperature</span>, and gases.</p>
+    <p>A robot called <em>Spider Legs</em> was sent into the <span class="vocab" data-word="crater" data-pos="noun" data-pron="/ˈkreɪtər/" data-def="The round hole at the top of a volcano" data-ja="噴火口" data-ex="Smoke was coming from the crater.">crater</span> at the top of the volcano. The robot could go where it was too dangerous for people. It sent back pictures and information about the gases inside the mountain.</p>
+    <p>The team worked for several days. Some of the <span class="vocab" data-word="data" data-pos="noun" data-pron="/ˈdeɪtə/" data-def="Facts and information, especially numbers" data-ja="データ" data-ex="The data showed that the temperature was rising.">data</span> was worrying, but other data was normal. Paul was not sure that the volcano was really dangerous.</p>
+    <p>&ldquo;Harry, we can't tell the whole town to leave because of a few hot springs and some small earthquakes,&rdquo; Paul said. &ldquo;We need more <span class="vocab" data-word="evidence" data-pos="noun" data-pron="/ˈevɪdəns/" data-def="Facts that help prove something is true" data-ja="証拠" data-ex="The evidence shows that the plan is working.">evidence</span>.&rdquo;</p>
+    <p>Harry was frustrated. He <em>knew</em> something was wrong. He could feel it.</p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">equipment</div><div class="vd">装備 &mdash; tools for a job</div></div>
+        <div class="vocab-card"><div class="vw">measure</div><div class="vd">測定する &mdash; find the amount</div></div>
+        <div class="vocab-card"><div class="vw">crater</div><div class="vd">噴火口 &mdash; hole at top of volcano</div></div>
+        <div class="vocab-card"><div class="vw">evidence</div><div class="vd">証拠 &mdash; facts that prove something</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>What is Spider Legs? <span class="answer">It is a robot that the team sent into the crater of the volcano.</span></li>
+        <li>Why didn't Paul want to warn the town? <span class="answer">He didn't think there was enough evidence that the volcano was dangerous.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 4 -->
+  <section class="chapter" id="ch4">
+    <h2 class="chapter-title"><span class="num">Chapter 4 &mdash;</span> Nobody Listens</h2>
+    <p class="chapter-intro">Harry tries to convince people, but they don't believe him</p>
+    <p>There was a big town meeting. Many important business people came. They were excited about the &ldquo;second-best small town&rdquo; <span class="vocab" data-word="award" data-pos="noun" data-pron="/əˈwɔːrd/" data-def="A prize given for doing something well" data-ja="賞" data-ex="She won an award for her work.">award</span>. New people wanted to come and live in Dante's Peak. New businesses wanted to open there. It was a very good time for the town.</p>
+    <p>Harry stood up at the meeting and said, &ldquo;I think we should put the town on <span class="vocab" data-word="alert" data-pos="noun" data-pron="/əˈlɜːrt/" data-def="A warning to be ready for danger" data-ja="警報" data-ex="The police put out an alert about the storm.">alert</span>. The volcano could be dangerous.&rdquo;</p>
+    <p>The room went quiet. Then people started talking loudly. They were angry. The business people said, &ldquo;You will <span class="vocab" data-word="destroy" data-pos="verb" data-pron="/dɪˈstrɔɪ/" data-def="To break something completely so it cannot be used" data-ja="破壊する" data-ex="The fire destroyed the building.">destroy</span> our town! Nobody will want to come here if you say there is a dangerous volcano!&rdquo;</p>
+    <p>Paul Dreyfus told Harry to sit down. &ldquo;We don't have enough evidence yet,&rdquo; Paul said to the people. &ldquo;Please don't worry. We are watching the mountain carefully.&rdquo;</p>
+    <p>Harry was very angry with Paul. Rachel tried to help, but she was in a difficult <span class="vocab" data-word="position" data-pos="noun" data-pron="/pəˈzɪʃən/" data-def="A situation or place where someone is" data-ja="立場" data-ex="She was in a difficult position as the leader.">position</span>. She was the mayor &mdash; she had to think about the town's businesses AND the people's <span class="vocab" data-word="safety" data-pos="noun" data-pron="/ˈseɪfti/" data-def="Being safe; not in danger" data-ja="安全" data-ex="The safety of the children is most important.">safety</span>.</p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">award</div><div class="vd">賞 &mdash; prize for doing well</div></div>
+        <div class="vocab-card"><div class="vw">alert</div><div class="vd">警報 &mdash; danger warning</div></div>
+        <div class="vocab-card"><div class="vw">destroy</div><div class="vd">破壊する &mdash; break completely</div></div>
+        <div class="vocab-card"><div class="vw">safety</div><div class="vd">安全 &mdash; being safe</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>Why were the business people angry? <span class="answer">They were afraid Harry's warning would stop people from coming to the town.</span></li>
+        <li>What did Paul tell Harry to do? <span class="answer">He told Harry to sit down because they didn't have enough evidence.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 5 -->
+  <section class="chapter" id="ch5">
+    <h2 class="chapter-title"><span class="num">Chapter 5 &mdash;</span> The Mountain Wakes</h2>
+    <p class="chapter-intro">The volcano shows its power</p>
+    <p>Harry and Rachel were spending more time together. He liked her very much, and he liked her children too. But Harry never stopped thinking about the mountain.</p>
+    <p>One night, Harry and Rachel were at Rachel's house when the ground started to <span class="vocab" data-word="shake" data-pos="verb" data-pron="/ʃeɪk/" data-def="To move quickly from side to side or up and down" data-ja="揺れる" data-ex="The earthquake made the whole building shake.">shake</span>. It was a real earthquake this time &mdash; strong enough for everyone to feel. Glasses fell from the <span class="vocab" data-word="shelves" data-pos="noun" data-pron="/ʃelvz/" data-def="Flat pieces of wood on a wall for putting things on" data-ja="棚" data-ex="The books were on the shelves.">shelves</span>. The children were frightened.</p>
+    <p>Then another earthquake came. And another. Harry ran to check his instruments. The readings were very bad. The mountain was <span class="vocab" data-word="definitely" data-pos="adverb" data-pron="/ˈdefɪnətli/" data-def="Without any doubt; for sure" data-ja="間違いなく" data-ex="This is definitely the right answer.">definitely</span> waking up.</p>
+    <p>Harry called Paul. &ldquo;Paul, we have to <span class="vocab" data-word="evacuate" data-pos="verb" data-pron="/ɪˈvækjueɪt/" data-def="To move people away from a dangerous place" data-ja="避難させる" data-ex="The police evacuated the building.">evacuate</span> the town. NOW.&rdquo;</p>
+    <p>This time, Paul listened. He could hear the <span class="vocab" data-word="fear" data-pos="noun" data-pron="/fɪr/" data-def="The feeling of being afraid" data-ja="恐怖" data-ex="She could see the fear in his eyes.">fear</span> in Harry's voice, and the data was clear. &ldquo;OK, Harry. Start the evacuation.&rdquo;</p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">shake</div><div class="vd">揺れる &mdash; move side to side</div></div>
+        <div class="vocab-card"><div class="vw">definitely</div><div class="vd">間違いなく &mdash; for sure</div></div>
+        <div class="vocab-card"><div class="vw">evacuate</div><div class="vd">避難させる &mdash; move from danger</div></div>
+        <div class="vocab-card"><div class="vw">fear</div><div class="vd">恐怖 &mdash; feeling of being afraid</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>What happened at Rachel's house? <span class="answer">Strong earthquakes shook the house and glasses fell from the shelves.</span></li>
+        <li>What did Harry ask Paul to do? <span class="answer">He asked Paul to evacuate the town immediately.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 6 -->
+  <section class="chapter" id="ch6">
+    <h2 class="chapter-title"><span class="num">Chapter 6 &mdash;</span> Escape</h2>
+    <p class="chapter-intro">The town tries to get away</p>
+    <p>The town <span class="vocab" data-word="sirens" data-pos="noun" data-pron="/ˈsaɪrənz/" data-def="Loud warning sounds" data-ja="サイレン" data-ex="The sirens told everyone to leave.">sirens</span> started. Rachel got on the radio and told everyone to leave the town. People ran to their cars. The roads were full of <span class="vocab" data-word="traffic" data-pos="noun" data-pron="/ˈtræfɪk/" data-def="Cars and trucks on the road" data-ja="交通" data-ex="There was a lot of traffic on the highway.">traffic</span>.</p>
+    <p>But Rachel's children told her something terrible: &ldquo;Grandma Ruth is still on the mountain!&rdquo; Rachel's mother-in-law, Ruth, lived alone in a small house near the top of the mountain, by the lake. She <span class="vocab" data-word="refused" data-pos="verb" data-pron="/rɪˈfjuːzd/" data-def="Said no; did not agree to do something" data-ja="拒否した" data-ex="He refused to leave his home.">refused</span> to leave her home.</p>
+    <p>Rachel knew she had to get Ruth. Harry said, &ldquo;I'll drive. Let's go.&rdquo; They got into Harry's truck with the children and drove up the mountain as fast as they could. Everyone else was driving <em>down</em> the mountain, but they were going <em>up</em>.</p>
+    <p>When they arrived at Ruth's house, the old woman was sitting calmly in her kitchen. &ldquo;I'm not leaving,&rdquo; she said. &ldquo;I've lived here for forty years.&rdquo;</p>
+    <p>Then they heard a <span class="vocab" data-word="tremendous" data-pos="adjective" data-pron="/trɪˈmendəs/" data-def="Very large, great, or powerful" data-ja="途方もない" data-ex="There was a tremendous noise from the mountain.">tremendous</span> sound from the mountain. The ground shook violently. Smoke and <span class="vocab" data-word="ash" data-pos="noun" data-pron="/æʃ/" data-def="The grey powder left after something burns" data-ja="灰" data-ex="Ash covered the streets after the fire.">ash</span> started coming from the top.</p>
+    <p>&ldquo;We have to go NOW!&rdquo; Harry shouted. This time, even Ruth agreed.</p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">sirens</div><div class="vd">サイレン &mdash; loud warning sounds</div></div>
+        <div class="vocab-card"><div class="vw">refused</div><div class="vd">拒否した &mdash; said no</div></div>
+        <div class="vocab-card"><div class="vw">tremendous</div><div class="vd">途方もない &mdash; very powerful</div></div>
+        <div class="vocab-card"><div class="vw">ash</div><div class="vd">灰 &mdash; grey powder from fire</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>Who was still on the mountain? <span class="answer">Grandma Ruth, Rachel's mother-in-law.</span></li>
+        <li>Why didn't Ruth want to leave? <span class="answer">She had lived there for forty years and refused to leave her home.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 7 -->
+  <section class="chapter" id="ch7">
+    <h2 class="chapter-title"><span class="num">Chapter 7 &mdash;</span> The Eruption</h2>
+    <p class="chapter-intro">The volcano erupts with terrible force</p>
+    <p>The volcano erupted. A huge <span class="vocab" data-word="cloud" data-pos="noun" data-pron="/klaʊd/" data-def="A mass of gas, smoke, or dust in the air" data-ja="雲" data-ex="A dark cloud covered the sun.">cloud</span> of ash and smoke went up into the sky. Hot rocks flew through the air. <span class="vocab" data-word="Lava" data-pos="noun" data-pron="/ˈlɑːvə/" data-def="Hot melted rock that comes from a volcano" data-ja="溶岩" data-ex="The lava flowed down the side of the mountain.">Lava</span> started to flow down the mountain.</p>
+    <p>Harry drove the truck down the mountain road, but the road was <span class="vocab" data-word="blocked" data-pos="adjective" data-pron="/blɒkt/" data-def="Something is in the way so you cannot pass" data-ja="塞がれた" data-ex="The road was blocked by a fallen tree.">blocked</span> by fallen trees. They had to go a different way. Harry turned toward the lake. &ldquo;We can cross the lake in Ruth's boat!&rdquo;</p>
+    <p>They got to the lake and jumped into the small boat. But the acid from the volcano was in the lake water now. The water started to eat through the <span class="vocab" data-word="metal" data-pos="noun" data-pron="/ˈmetəl/" data-def="A hard, strong material like iron or steel" data-ja="金属" data-ex="The bridge was made of metal.">metal</span> bottom of the boat. Water came in.</p>
+    <p>Ruth looked at her family. She loved them so much. Without saying a word, she <span class="vocab" data-word="stepped" data-pos="verb" data-pron="/stept/" data-def="Moved your foot to walk or go somewhere" data-ja="足を踏み出した" data-ex="She stepped out of the car.">stepped</span> out of the boat into the acid water. She pushed the boat toward the <span class="vocab" data-word="shore" data-pos="noun" data-pron="/ʃɔːr/" data-def="The land along the edge of water" data-ja="岸" data-ex="They walked along the shore of the lake.">shore</span>. The acid <span class="vocab" data-word="burned" data-pos="verb" data-pron="/bɜːrnd/" data-def="Hurt or damaged by heat or chemicals" data-ja="焼いた" data-ex="The hot coffee burned his hand.">burned</span> her badly, but she saved her family.</p>
+    <p>They reached the shore, but Ruth was very badly hurt. She died in Rachel's arms. Everyone was crying.</p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">lava</div><div class="vd">溶岩 &mdash; hot melted rock</div></div>
+        <div class="vocab-card"><div class="vw">blocked</div><div class="vd">塞がれた &mdash; cannot pass</div></div>
+        <div class="vocab-card"><div class="vw">shore</div><div class="vd">岸 &mdash; land at water's edge</div></div>
+        <div class="vocab-card"><div class="vw">burned</div><div class="vd">焼いた &mdash; hurt by heat</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>Why couldn't they drive down the mountain? <span class="answer">The road was blocked by fallen trees.</span></li>
+        <li>What happened to the boat on the lake? <span class="answer">The acid water ate through the metal bottom and water came in.</span></li>
+        <li>What did Ruth do to save her family? <span class="answer">She got out of the boat into the acid water and pushed the boat to shore. She died from the burns.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 8 -->
+  <section class="chapter" id="ch8">
+    <h2 class="chapter-title"><span class="num">Chapter 8 &mdash;</span> Survival</h2>
+    <p class="chapter-intro">Harry and the family fight to stay alive</p>
+    <p>Harry and the family ran to an old <span class="vocab" data-word="mine" data-pos="noun" data-pron="/maɪn/" data-def="A deep hole in the ground where people dig for coal, gold, etc." data-ja="鉱山" data-ex="The miners worked deep inside the mine.">mine</span> in the mountain. They went inside just as a huge <span class="vocab" data-word="flow" data-pos="noun" data-pron="/floʊ/" data-def="A steady movement of something" data-ja="流れ" data-ex="The flow of water was very strong.">flow</span> of hot ash and rock came down the mountain. It was a <span class="vocab" data-word="pyroclastic" data-pos="adjective" data-pron="/ˌpaɪroʊˈklæstɪk/" data-def="Made of hot rock and gas from a volcano, moving very fast" data-ja="火砕流の" data-ex="The pyroclastic flow destroyed everything in its path.">pyroclastic</span> flow &mdash; one of the most dangerous things a volcano can produce. It moves at hundreds of kilometers per hour and destroys everything.</p>
+    <p>Inside the mine, it was dark and <span class="vocab" data-word="dusty" data-pos="adjective" data-pron="/ˈdʌsti/" data-def="Covered with dust; dirty with small dry pieces" data-ja="ほこりっぽい" data-ex="The old room was dark and dusty.">dusty</span>. They could hear the terrible sound of the eruption outside. The children were very scared. Rachel held them close.</p>
+    <p>Harry found his emergency <span class="vocab" data-word="beacon" data-pos="noun" data-pron="/ˈbiːkən/" data-def="A device that sends a signal so people can find you" data-ja="発信機" data-ex="The beacon sent a signal to the rescue team.">beacon</span> &mdash; a small device that sends a <span class="vocab" data-word="signal" data-pos="noun" data-pron="/ˈsɪɡnəl/" data-def="A sound, light, or radio wave that sends information" data-ja="信号" data-ex="The signal was too weak to reach the base.">signal</span> so rescue teams can find you. He turned it on and hoped that someone would come.</p>
+    <p>They waited in the dark mine for hours. Harry kept everyone calm. He told the children stories and made sure they had water. Rachel looked at Harry and knew he was a good man.</p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">mine</div><div class="vd">鉱山 &mdash; hole for digging minerals</div></div>
+        <div class="vocab-card"><div class="vw">pyroclastic</div><div class="vd">火砕流の &mdash; hot fast volcanic flow</div></div>
+        <div class="vocab-card"><div class="vw">beacon</div><div class="vd">発信機 &mdash; signal device</div></div>
+        <div class="vocab-card"><div class="vw">signal</div><div class="vd">信号 &mdash; sends information</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>Where did the family hide? <span class="answer">They hid inside an old mine in the mountain.</span></li>
+        <li>What is a pyroclastic flow? <span class="answer">A fast-moving flow of hot ash and rock from a volcano that destroys everything.</span></li>
+        <li>How did Harry try to get help? <span class="answer">He turned on his emergency beacon to send a signal to rescue teams.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Chapter 9 -->
+  <section class="chapter" id="ch9">
+    <h2 class="chapter-title"><span class="num">Chapter 9 &mdash;</span> After the Disaster</h2>
+    <p class="chapter-intro">Rescue and hope</p>
+    <p>The rescue teams found the <span class="vocab" data-word="signal" data-pos="noun" data-pron="/ˈsɪɡnəl/" data-def="A sound, light, or radio wave that sends information" data-ja="信号" data-ex="The signal was too weak to reach the base.">signal</span> from Harry's beacon. They came with big machines and started to dig through the ash and rock. It took many hours, but finally they reached the mine.</p>
+    <p>When the rescue workers opened the mine, Harry, Rachel, and the children were alive. They were dirty, tired, and sad about Ruth, but they were <span class="vocab" data-word="alive" data-pos="adjective" data-pron="/əˈlaɪv/" data-def="Living; not dead" data-ja="生きている" data-ex="After the accident, everyone was still alive.">alive</span>.</p>
+    <p>The town of Dante's Peak was <span class="vocab" data-word="buried" data-pos="verb" data-pron="/ˈberid/" data-def="Covered by something so you cannot see it" data-ja="埋もれた" data-ex="The village was buried under the snow.">buried</span> under ash. Most of the buildings were destroyed. But because of the <span class="vocab" data-word="evacuation" data-pos="noun" data-pron="/ɪˌvækjuˈeɪʃən/" data-def="Moving people away from a dangerous place" data-ja="避難" data-ex="The evacuation saved many lives.">evacuation</span>, most of the people were safe. Harry's warnings had saved many lives.</p>
+    <p>Harry looked at the mountain. It was quiet now. The eruption was over. He looked at Rachel and the children. He had lost so much before &mdash; Marianne, his old life. But now, maybe, he could start again.</p>
+    <p>Rachel took his hand. &ldquo;Thank you, Harry,&rdquo; she said. &ldquo;Thank you for not giving up.&rdquo;</p>
+    <p>Harry smiled. The mountain was quiet, and there was <span class="vocab" data-word="hope" data-pos="noun" data-pron="/hoʊp/" data-def="A feeling that good things will happen in the future" data-ja="希望" data-ex="There is always hope for a better future.">hope</span> for a new beginning.</p>
+
+    <div class="vocab-section">
+      <h3>Key Vocabulary</h3>
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">alive</div><div class="vd">生きている &mdash; living, not dead</div></div>
+        <div class="vocab-card"><div class="vw">buried</div><div class="vd">埋もれた &mdash; covered completely</div></div>
+        <div class="vocab-card"><div class="vw">evacuation</div><div class="vd">避難 &mdash; moving from danger</div></div>
+        <div class="vocab-card"><div class="vw">hope</div><div class="vd">希望 &mdash; feeling good things will come</div></div>
+      </div>
+    </div>
+    <div class="quiz">
+      <h3>Comprehension Check</h3>
+      <ol>
+        <li>How did the rescue team find them? <span class="answer">They found the signal from Harry's emergency beacon.</span></li>
+        <li>What happened to the town? <span class="answer">It was buried under ash and most buildings were destroyed, but most people were safe.</span></li>
+        <li>What does Harry feel at the end of the story? <span class="answer">He feels hope for a new beginning with Rachel and her children.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Full Vocabulary List -->
+  <section class="chapter" id="vocablist">
+    <h2 class="chapter-title"><span class="num">Complete Vocabulary List</span></h2>
+    <div class="vocab-section" style="border:none;padding:0;background:transparent">
+      <div class="vocab-grid">
+        <div class="vocab-card"><div class="vw">acid</div><div class="vd">酸 &mdash; strong chemical</div></div>
+        <div class="vocab-card"><div class="vw">alert</div><div class="vd">警報 &mdash; danger warning</div></div>
+        <div class="vocab-card"><div class="vw">alive</div><div class="vd">生きている &mdash; not dead</div></div>
+        <div class="vocab-card"><div class="vw">ash</div><div class="vd">灰 &mdash; powder from burning</div></div>
+        <div class="vocab-card"><div class="vw">award</div><div class="vd">賞 &mdash; prize</div></div>
+        <div class="vocab-card"><div class="vw">beacon</div><div class="vd">発信機 &mdash; signal device</div></div>
+        <div class="vocab-card"><div class="vw">blocked</div><div class="vd">塞がれた &mdash; cannot pass</div></div>
+        <div class="vocab-card"><div class="vw">boiled</div><div class="vd">沸騰した &mdash; heated to 100°C</div></div>
+        <div class="vocab-card"><div class="vw">buried</div><div class="vd">埋もれた &mdash; covered up</div></div>
+        <div class="vocab-card"><div class="vw">burned</div><div class="vd">焼いた &mdash; hurt by heat</div></div>
+        <div class="vocab-card"><div class="vw">crater</div><div class="vd">噴火口 &mdash; hole at top of volcano</div></div>
+        <div class="vocab-card"><div class="vw">data</div><div class="vd">データ &mdash; facts, information</div></div>
+        <div class="vocab-card"><div class="vw">definitely</div><div class="vd">間違いなく &mdash; for sure</div></div>
+        <div class="vocab-card"><div class="vw">destroy</div><div class="vd">破壊する &mdash; break completely</div></div>
+        <div class="vocab-card"><div class="vw">earthquakes</div><div class="vd">地震 &mdash; ground shaking</div></div>
+        <div class="vocab-card"><div class="vw">equipment</div><div class="vd">装備 &mdash; tools for a job</div></div>
+        <div class="vocab-card"><div class="vw">erupt</div><div class="vd">噴火する &mdash; volcano explodes</div></div>
+        <div class="vocab-card"><div class="vw">eruption</div><div class="vd">噴火 &mdash; volcanic explosion</div></div>
+        <div class="vocab-card"><div class="vw">evacuation</div><div class="vd">避難 &mdash; moving from danger</div></div>
+        <div class="vocab-card"><div class="vw">evacuate</div><div class="vd">避難させる &mdash; move from danger</div></div>
+        <div class="vocab-card"><div class="vw">evidence</div><div class="vd">証拠 &mdash; proof</div></div>
+        <div class="vocab-card"><div class="vw">fear</div><div class="vd">恐怖 &mdash; being afraid</div></div>
+        <div class="vocab-card"><div class="vw">geological</div><div class="vd">地質学の &mdash; about earth/rocks</div></div>
+        <div class="vocab-card"><div class="vw">hope</div><div class="vd">希望 &mdash; good feeling for future</div></div>
+        <div class="vocab-card"><div class="vw">hot springs</div><div class="vd">温泉 &mdash; naturally hot water</div></div>
+        <div class="vocab-card"><div class="vw">instruments</div><div class="vd">計器 &mdash; measuring tools</div></div>
+        <div class="vocab-card"><div class="vw">lava</div><div class="vd">溶岩 &mdash; hot melted rock</div></div>
+        <div class="vocab-card"><div class="vw">mayor</div><div class="vd">市長 &mdash; town leader</div></div>
+        <div class="vocab-card"><div class="vw">measure</div><div class="vd">測定する &mdash; find the amount</div></div>
+        <div class="vocab-card"><div class="vw">mine</div><div class="vd">鉱山 &mdash; underground digging</div></div>
+        <div class="vocab-card"><div class="vw">partner</div><div class="vd">パートナー &mdash; person you work with</div></div>
+        <div class="vocab-card"><div class="vw">peaceful</div><div class="vd">平和な &mdash; quiet and calm</div></div>
+        <div class="vocab-card"><div class="vw">pyroclastic</div><div class="vd">火砕流の &mdash; hot volcanic flow</div></div>
+        <div class="vocab-card"><div class="vw">refused</div><div class="vd">拒否した &mdash; said no</div></div>
+        <div class="vocab-card"><div class="vw">safety</div><div class="vd">安全 &mdash; being safe</div></div>
+        <div class="vocab-card"><div class="vw">shake</div><div class="vd">揺れる &mdash; move side to side</div></div>
+        <div class="vocab-card"><div class="vw">shore</div><div class="vd">岸 &mdash; edge of water</div></div>
+        <div class="vocab-card"><div class="vw">signal</div><div class="vd">信号 &mdash; sends information</div></div>
+        <div class="vocab-card"><div class="vw">sirens</div><div class="vd">サイレン &mdash; warning sounds</div></div>
+        <div class="vocab-card"><div class="vw">signs</div><div class="vd">兆候 &mdash; things that show</div></div>
+        <div class="vocab-card"><div class="vw">temperature</div><div class="vd">温度 &mdash; hot or cold level</div></div>
+        <div class="vocab-card"><div class="vw">tremendous</div><div class="vd">途方もない &mdash; very powerful</div></div>
+        <div class="vocab-card"><div class="vw">valley</div><div class="vd">谷 &mdash; low land between mountains</div></div>
+        <div class="vocab-card"><div class="vw">volcano</div><div class="vd">火山 &mdash; mountain that erupts</div></div>
+        <div class="vocab-card"><div class="vw">volcanologist</div><div class="vd">火山学者 &mdash; volcano scientist</div></div>
+        <div class="vocab-card"><div class="vw">warn</div><div class="vd">警告する &mdash; tell about danger</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// Sidebar toggle (mobile)
+const sidebar=document.getElementById('sidebar'),toggle=document.getElementById('sidebarToggle');
+toggle.addEventListener('click',()=>sidebar.classList.toggle('open'));
+
+// Close sidebar on link click (mobile)
+document.querySelectorAll('#sidebarNav a').forEach(a=>a.addEventListener('click',()=>sidebar.classList.remove('open')));
+
+// Active sidebar link on scroll
+const chapters=document.querySelectorAll('.chapter'),navLinks=document.querySelectorAll('#sidebarNav a');
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      navLinks.forEach(l=>l.classList.remove('active'));
+      const link=document.querySelector(`#sidebarNav a[href="#${e.target.id}"]`);
+      if(link)link.classList.add('active');
+    }
+  });
+},{rootMargin:'-20% 0px -70% 0px'});
+chapters.forEach(ch=>observer.observe(ch));
+
+// Reading progress bar
+const fill=document.getElementById('progressFill');
+window.addEventListener('scroll',()=>{
+  const h=document.documentElement,b=document.body;
+  const st=h.scrollTop||b.scrollTop;
+  const sh=h.scrollHeight-h.clientHeight;
+  fill.style.width=Math.min((st/sh)*100,100)+'%';
+});
+
+// Vocabulary popup
+let currentPopup=null;
+document.addEventListener('click',e=>{
+  // Close any open popup
+  if(currentPopup){currentPopup.remove();currentPopup=null;}
+  const v=e.target.closest('.vocab');
+  if(!v)return;
+  e.stopPropagation();
+  const popup=document.createElement('div');
+  popup.className='popup show';
+  popup.innerHTML=`
+    <span class="word">${v.dataset.word}</span><span class="pos">${v.dataset.pos}</span>
+    <span class="pron">${v.dataset.pron}</span>
+    <div class="def">${v.dataset.def}</div>
+    <div class="def-ja">${v.dataset.ja}</div>
+    ${v.dataset.ex?`<div class="example">"${v.dataset.ex}"</div>`:''}
+  `;
+  v.style.position='relative';
+  v.appendChild(popup);
+  // Keep popup in viewport
+  const rect=popup.getBoundingClientRect();
+  if(rect.left<8)popup.style.transform=`translateX(${8-rect.left}px)`;
+  if(rect.right>window.innerWidth-8)popup.style.transform=`translateX(${window.innerWidth-8-rect.right}px)`;
+  if(rect.top<8){popup.style.bottom='auto';popup.style.top='calc(100% + 10px)';popup.querySelector('.popup');}
+  currentPopup=popup;
+});
+
+// Quiz: click to reveal answer
+document.querySelectorAll('.quiz li').forEach(li=>li.addEventListener('click',()=>li.classList.toggle('revealed')));
+</script>
+</body>
+</html>
