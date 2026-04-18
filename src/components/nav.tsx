@@ -11,6 +11,7 @@ const links = [
   { href: "/english", label: "📚 English" },
   { href: "/movies", label: "🎬 Movies" },
   { href: "/history", label: "History" },
+  { href: "/theory", label: "Theory" },
 ];
 
 export function Nav() {
