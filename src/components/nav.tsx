@@ -3,18 +3,9 @@
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const links = [
-  { href: "/songs", label: "Songs" },
-  { href: "/videos", label: "Videos" },
-  { href: "/artists", label: "Artists" },
-  { href: "/novels", label: "📖 Novels" },
-  { href: "/english", label: "📚 English" },
-  { href: "/movies", label: "🎬 Movies" },
-  { href: "/history", label: "History" },
-  { href: "/theory", label: "Theory" },
-];
+type NavItem = { href: string; label: string };
 
-export function Nav() {
+export function Nav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
@@ -24,7 +15,7 @@ export function Nav() {
           Music Library
         </a>
         <div className="flex gap-4">
-          {links.map(({ href, label }) => {
+          {items.map(({ href, label }) => {
             const isActive =
               href === "/"
                 ? pathname === "/"
