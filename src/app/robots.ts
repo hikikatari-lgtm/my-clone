@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const SITE_MODE = process.env.SITE_MODE || "public";
+const SITE_MODE = process.env.NEXT_PUBLIC_SITE_MODE || "public";
 
 export default function robots(): MetadataRoute.Robots {
   if (SITE_MODE === "private") {

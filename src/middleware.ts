@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const SITE_MODE = process.env.SITE_MODE || "public";
+const SITE_MODE = process.env.NEXT_PUBLIC_SITE_MODE || "public";
 const isPrivateMode = SITE_MODE === "private";
 
 const privateOnlyPaths = ["/novels", "/movies", "/english"];

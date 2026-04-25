@@ -1,4 +1,4 @@
-export const SITE_MODE = process.env.SITE_MODE || "public";
+export const SITE_MODE = process.env.NEXT_PUBLIC_SITE_MODE || "public";
 
 export const isPublicMode = SITE_MODE === "public";
 export const isPrivateMode = SITE_MODE === "private";
