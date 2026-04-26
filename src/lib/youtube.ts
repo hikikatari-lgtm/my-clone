@@ -54,9 +54,12 @@ export async function fetchPlaylists(): Promise<Playlist[]> {
   const validityChecks = await Promise.all(
     candidates.map(async (p) => {
       try {
-        const checkUrl = `${API_BASE}/playlistItems?part=id&playlistId=${p.id}&maxResults=1&key=${key}`;
+        const checkUrl = `${API_BASE}/playlistItems?part=snippet,status&playlistId=${p.id}&maxResults=1&key=${key}`;
         const res = await fetch(checkUrl, { next: { revalidate: 3600 } });
-        return { playlist: p, valid: res.ok };
+        if (!res.ok) return { playlist: p, valid: false };
+        const data = await res.json();
+        const hasItems = (data.items?.length ?? 0) > 0;
+        return { playlist: p, valid: hasItems };
       } catch {
         return { playlist: p, valid: false };
       }
