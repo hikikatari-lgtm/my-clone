@@ -47,7 +47,7 @@ export async function fetchPlaylists(): Promise<Playlist[]> {
     pageToken = data.nextPageToken ?? "";
   } while (pageToken);
 
-  return playlists;
+  return playlists.filter(p => p.videoCount > 0);
 }
 
 /** Get the uploads playlist ID for the channel */
