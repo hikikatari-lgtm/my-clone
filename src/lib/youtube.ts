@@ -50,21 +50,34 @@ export async function fetchPlaylists(): Promise<Playlist[]> {
   // 1. videoCount > 0 でフィルター
   const candidates = playlists.filter(p => p.videoCount > 0);
 
-  // 2. 各プレイリストの実存チェック（並列実行）
+  // 2. 各プレイリストの実存チェック（並列実行）— playlistItems が 404 を返すゾンビを除外
   const validityChecks = await Promise.all(
     candidates.map(async (p) => {
       try {
         const checkUrl = `${API_BASE}/playlistItems?part=snippet,status&playlistId=${p.id}&maxResults=1&key=${key}`;
         const res = await fetch(checkUrl, { next: { revalidate: 3600 } });
-        if (!res.ok) return { playlist: p, valid: false };
+        if (res.status === 404) {
+          return { playlist: p, valid: false, reason: "404" };
+        }
+        if (!res.ok) {
+          return { playlist: p, valid: false, reason: `http_${res.status}` };
+        }
         const data = await res.json();
         const hasItems = (data.items?.length ?? 0) > 0;
-        return { playlist: p, valid: hasItems };
+        return { playlist: p, valid: hasItems, reason: hasItems ? undefined : "empty" };
       } catch {
-        return { playlist: p, valid: false };
+        return { playlist: p, valid: false, reason: "fetch_error" };
       }
     })
   );
+
+  const excluded = validityChecks.filter(c => !c.valid);
+  if (excluded.length > 0) {
+    console.warn(
+      `[fetchPlaylists] Excluded ${excluded.length} zombie playlist(s):`,
+      excluded.map(c => `${c.playlist.id} (${c.playlist.title}) [${c.reason}]`)
+    );
+  }
 
   // 3. 有効なものだけ返す
   return validityChecks
