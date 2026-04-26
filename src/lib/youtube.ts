@@ -8,6 +8,10 @@ const EXCLUDED_PLAYLIST_IDS = [
   'PLqMoQkHWf7EY85mNqIE0MF7os93Rt2WDY', // ピアノ弾き語り洋楽（YouTube API不整合）
   'PLqMoQkHWf7EbN3gSxz07HzGQvjKLNDLLi', // 作曲講座（YouTube API不整合）
   'PLqMoQkHWf7EbVgGrjZzM-aT7kVam73tN5', // ピアノコード奏法（YouTube API不整合）
+  'PLqMoQkHWf7Ea8g6qCv0mMU_-V1JpEg_0p', // ピアノ弾き語りレッスン邦楽（YouTube API不整合）
+  'PLqMoQkHWf7Eb5rw9tLE0DRpDYUnFqfBl6', // ピアノ弾き語り洋楽（YouTube API不整合）
+  'PLqMoQkHWf7Eb8_NJKiUBZwzKJHEJfXIgQ', // 作曲講座（YouTube API不整合）
+  'PLqMoQkHWf7EZv12FJlbSCExb6ZHpOF-v3', // ピアノコード奏法（YouTube API不整合）
 ];
 
 function getApiKey(): string {
