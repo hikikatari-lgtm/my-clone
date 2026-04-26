@@ -3,6 +3,13 @@ import type { Video, Playlist, VideosPage } from "@/types/video";
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 const CHANNEL_ID = "UCBry-IGC_zBdmNkgMucqC7A";
 
+const EXCLUDED_PLAYLIST_IDS = [
+  'PLqMoQkHWf7EbVDi2NSmytlWKZ2funbIf-', // ピアノ弾き語りレッスン邦楽（YouTube API不整合）
+  'PLqMoQkHWf7EY85mNqIE0MF7os93Rt2WDY', // ピアノ弾き語り洋楽（YouTube API不整合）
+  'PLqMoQkHWf7EbN3gSxz07HzGQvjKLNDLLi', // 作曲講座（YouTube API不整合）
+  'PLqMoQkHWf7EbVgGrjZzM-aT7kVam73tN5', // ピアノコード奏法（YouTube API不整合）
+];
+
 function getApiKey(): string {
   const key = process.env.YOUTUBE_API_KEY;
   if (!key) throw new Error("YOUTUBE_API_KEY is not set");
@@ -47,7 +54,9 @@ export async function fetchPlaylists(): Promise<Playlist[]> {
     pageToken = data.nextPageToken ?? "";
   } while (pageToken);
 
-  return playlists.filter(p => p.videoCount > 0);
+  return playlists
+    .filter(p => p.videoCount > 0)
+    .filter(p => !EXCLUDED_PLAYLIST_IDS.includes(p.id));
 }
 
 /** Get the uploads playlist ID for the channel */
