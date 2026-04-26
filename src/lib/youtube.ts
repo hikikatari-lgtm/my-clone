@@ -3,17 +3,6 @@ import type { Video, Playlist, VideosPage } from "@/types/video";
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 const CHANNEL_ID = "UCBry-IGC_zBdmNkgMucqC7A";
 
-const EXCLUDED_PLAYLIST_IDS = [
-  'PLqMoQkHWf7EbVDi2NSmytlWKZ2funbIf-', // ピアノ弾き語りレッスン邦楽（YouTube API不整合）
-  'PLqMoQkHWf7EY85mNqIE0MF7os93Rt2WDY', // ピアノ弾き語り洋楽（YouTube API不整合）
-  'PLqMoQkHWf7EbN3gSxz07HzGQvjKLNDLLi', // 作曲講座（YouTube API不整合）
-  'PLqMoQkHWf7EbVgGrjZzM-aT7kVam73tN5', // ピアノコード奏法（YouTube API不整合）
-  'PLqMoQkHWf7Ea8g6qCv0mMU_-V1JpEg_0p', // ピアノ弾き語りレッスン邦楽（YouTube API不整合）
-  'PLqMoQkHWf7Eb5rw9tLE0DRpDYUnFqfBl6', // ピアノ弾き語り洋楽（YouTube API不整合）
-  'PLqMoQkHWf7Eb8_NJKiUBZwzKJHEJfXIgQ', // 作曲講座（YouTube API不整合）
-  'PLqMoQkHWf7EZv12FJlbSCExb6ZHpOF-v3', // ピアノコード奏法（YouTube API不整合）
-];
-
 function getApiKey(): string {
   const key = process.env.YOUTUBE_API_KEY;
   if (!key) throw new Error("YOUTUBE_API_KEY is not set");
@@ -58,9 +47,26 @@ export async function fetchPlaylists(): Promise<Playlist[]> {
     pageToken = data.nextPageToken ?? "";
   } while (pageToken);
 
-  return playlists
-    .filter(p => p.videoCount > 0)
-    .filter(p => !EXCLUDED_PLAYLIST_IDS.includes(p.id));
+  // 1. videoCount > 0 でフィルター
+  const candidates = playlists.filter(p => p.videoCount > 0);
+
+  // 2. 各プレイリストの実存チェック（並列実行）
+  const validityChecks = await Promise.all(
+    candidates.map(async (p) => {
+      try {
+        const checkUrl = `${API_BASE}/playlistItems?part=id&playlistId=${p.id}&maxResults=1&key=${key}`;
+        const res = await fetch(checkUrl, { next: { revalidate: 3600 } });
+        return { playlist: p, valid: res.ok };
+      } catch {
+        return { playlist: p, valid: false };
+      }
+    })
+  );
+
+  // 3. 有効なものだけ返す
+  return validityChecks
+    .filter(check => check.valid)
+    .map(check => check.playlist);
 }
 
 /** Get the uploads playlist ID for the channel */
