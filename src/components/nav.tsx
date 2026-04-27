@@ -15,7 +15,7 @@ export function Nav({ items }: { items: NavItem[] }) {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-sm">
+    <nav className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
         <a href="/" className="text-sm font-bold text-foreground">
           Music Library
@@ -44,7 +44,7 @@ export function Nav({ items }: { items: NavItem[] }) {
           aria-expanded={open}
           aria-controls="mobile-nav-menu"
           onClick={() => setOpen((v) => !v)}
-          className="relative z-50 -mr-2 p-2 text-foreground transform-gpu md:hidden"
+          className="-mr-2 p-2 text-foreground md:hidden"
         >
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
