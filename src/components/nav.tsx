@@ -44,7 +44,7 @@ export function Nav({ items }: { items: NavItem[] }) {
           aria-expanded={open}
           aria-controls="mobile-nav-menu"
           onClick={() => setOpen((v) => !v)}
-          className="-mr-2 p-2 text-foreground md:hidden"
+          className="relative z-50 -mr-2 p-2 text-foreground transform-gpu md:hidden"
         >
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
