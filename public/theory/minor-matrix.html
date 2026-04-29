@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minor Scale Matrix - Directline Studio</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #6b6b6b;
+    --text-faint: #a8a8a8;
+    --border: #e5e5e0;
+    --border-strong: #d0d0c8;
+    
+    /* 4スケールの色 - くっきり表示用 */
+    --natural-bg: #EEEDFE;
+    --natural-text: #26215C;
+    --natural-accent: #534AB7;
+    --natural-label: #3C3489;
+    --natural-border: #AFA9EC;
+    
+    --harmonic-bg: #E1F5EE;
+    --harmonic-text: #04342C;
+    --harmonic-accent: #0F6E56;
+    --harmonic-label: #085041;
+    --harmonic-border: #5DCAA5;
+    
+    --melodic-bg: #FAECE7;
+    --melodic-text: #4A1B0C;
+    --melodic-accent: #993C1D;
+    --melodic-label: #712B13;
+    --melodic-border: #F0997B;
+    
+    --dorian-bg: #E6F1FB;
+    --dorian-text: #042C53;
+    --dorian-accent: #185FA5;
+    --dorian-label: #0C447C;
+    --dorian-border: #85B7EB;
+  }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+                 "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 24px 16px;
+    min-height: 100vh;
+  }
+  
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .title {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  
+  .controls {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .control-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .key-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .key-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text);
+    font-family: inherit;
+    min-width: 36px;
+  }
+  .key-btn:hover {
+    border-color: var(--border-strong);
+    background: #f5f5f0;
+  }
+  .key-btn.active {
+    background: var(--text);
+    color: var(--surface);
+    border-color: var(--text);
+  }
+  
+  .display-toggle {
+    display: flex;
+    background: #f0f0eb;
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid var(--border);
+  }
+  .toggle-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .toggle-btn.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  
+  .matrix-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+  }
+  
+  table.matrix {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 4px;
+  }
+  
+  table.matrix th {
+    text-align: center;
+    padding: 8px 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-faint);
+    letter-spacing: 0.05em;
+  }
+  table.matrix th.scale-header {
+    text-align: left;
+    width: 110px;
+    padding-left: 12px;
+  }
+  
+  table.matrix td {
+    padding: 0;
+    text-align: center;
+    border-radius: 6px;
+  }
+  
+  /* Scale label cells */
+  .scale-label {
+    padding: 12px;
+    font-weight: 600;
+    font-size: 13px;
+    text-align: left;
+    border-radius: 8px;
+  }
+  .scale-label.natural   { background: var(--natural-bg);   color: var(--natural-label); }
+  .scale-label.harmonic  { background: var(--harmonic-bg);  color: var(--harmonic-label); }
+  .scale-label.melodic   { background: var(--melodic-bg);   color: var(--melodic-label); }
+  .scale-label.dorian    { background: var(--dorian-bg);    color: var(--dorian-label); }
+  
+  .scale-label .scale-name {
+    display: block;
+  }
+  .scale-label .scale-formula {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    margin-top: 2px;
+    opacity: 0.85;
+  }
+  
+  /* Chord cells - ★全コードくっきり表示★ */
+  .chord-cell {
+    padding: 10px 6px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    cursor: default;
+  }
+  .chord-cell.natural   { background: var(--natural-bg);   color: var(--natural-text); }
+  .chord-cell.harmonic  { background: var(--harmonic-bg);  color: var(--harmonic-text); }
+  .chord-cell.melodic   { background: var(--melodic-bg);   color: var(--melodic-text); }
+  .chord-cell.dorian    { background: var(--dorian-bg);    color: var(--dorian-text); }
+  
+  /* Unique (差分) コードはボーダーで強調 + 太字 */
+  .chord-cell.unique {
+    font-weight: 700;
+  }
+  .chord-cell.unique.natural   { box-shadow: inset 0 0 0 2px var(--natural-accent); }
+  .chord-cell.unique.harmonic  { box-shadow: inset 0 0 0 2px var(--harmonic-accent); }
+  .chord-cell.unique.melodic   { box-shadow: inset 0 0 0 2px var(--melodic-accent); }
+  .chord-cell.unique.dorian    { box-shadow: inset 0 0 0 2px var(--dorian-accent); }
+  
+  .chord-cell.unique::before {
+    content: "★";
+    display: block;
+    font-size: 9px;
+    line-height: 1;
+    margin-bottom: 2px;
+    opacity: 0.9;
+  }
+  
+  .chord-text {
+    font-size: 13px;
+    font-style: italic;
+    font-family: "Times New Roman", Georgia, serif;
+    line-height: 1.2;
+  }
+  .chord-text.compact {
+    font-size: 12px;
+  }
+  
+  .func-tag {
+    display: block;
+    font-size: 9px;
+    font-weight: 500;
+    margin-top: 3px;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+    font-family: -apple-system, sans-serif;
+    font-style: normal;
+  }
+  
+  /* Legend */
+  .legend {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.8;
+  }
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+  .legend-swatch.natural  { background: var(--natural-accent);  }
+  .legend-swatch.harmonic { background: var(--harmonic-accent); }
+  .legend-swatch.melodic  { background: var(--melodic-accent);  }
+  .legend-swatch.dorian   { background: var(--dorian-accent);   }
+  
+  .legend-divider {
+    margin: 10px 0;
+    border-top: 1px solid var(--border);
+  }
+  
+  .legend-fn {
+    font-size: 11px;
+  }
+  .fn-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: #f5f5f0;
+    font-weight: 500;
+    margin-right: 2px;
+  }
+  
+  /* Insight panel */
+  .insight {
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .insight h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .insight p {
+    color: var(--text-muted);
+  }
+  .insight code {
+    background: #f0f0eb;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: "Menlo", "Monaco", monospace;
+  }
+  
+  .footer {
+    text-align: center;
+    margin-top: 28px;
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+  .footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+  .footer a:hover {
+    border-bottom-color: var(--text-muted);
+  }
+  
+  @media (max-width: 640px) {
+    body { padding: 16px 8px; }
+    .title { font-size: 22px; }
+    .matrix-wrap { padding: 12px; }
+    table.matrix th { font-size: 10px; }
+    .chord-text { font-size: 11px; }
+    .scale-label { font-size: 12px; padding: 10px 8px; }
+    .scale-label .scale-formula { display: none; }
+    .controls { padding: 12px; gap: 10px; }
+    .key-btn { padding: 5px 8px; font-size: 12px; min-width: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="badge">Music Theory · Matrix View</div>
+    <h1 class="title">Minor Scale Matrix</h1>
+    <p class="subtitle">4スケール × 7度数のダイアトニックを一望</p>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <span class="control-label">Key</span>
+      <div class="key-buttons" id="keyButtons"></div>
+    </div>
+    <div class="control-group">
+      <span class="control-label">表示</span>
+      <div class="display-toggle">
+        <button class="toggle-btn active" data-mode="chord">コード名</button>
+        <button class="toggle-btn" data-mode="roman">ローマ数字</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="matrix-wrap">
+    <table class="matrix" id="matrix">
+      <thead>
+        <tr>
+          <th class="scale-header"></th>
+          <th>I</th><th>II</th><th>♭III</th><th>IV</th><th>V</th><th>♭VI/VI</th><th>♭VII/VII</th>
+        </tr>
+      </thead>
+      <tbody id="matrixBody"></tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <div class="legend-row">
+      <span class="legend-item"><span class="legend-swatch natural"></span><strong>Natural</strong></span>
+      <span class="legend-item"><span class="legend-swatch harmonic"></span><strong>Harmonic</strong></span>
+      <span class="legend-item"><span class="legend-swatch melodic"></span><strong>Melodic</strong></span>
+      <span class="legend-item"><span class="legend-swatch dorian"></span><strong>Dorian</strong></span>
+      <span class="legend-item">★ = そのスケールでしか出ない差分コード</span>
+    </div>
+    <div class="legend-divider"></div>
+    <div class="legend-fn">
+      機能タグ：
+      <span class="fn-tag">T</span>トニック
+      <span class="fn-tag">SD</span>サブドミナント
+      <span class="fn-tag">SDm</span>サブドミナントマイナー
+      <span class="fn-tag">D</span>ドミナント
+      <span class="fn-tag">D弱</span>弱ドミナント
+    </div>
+  </div>
+
+  <div class="insight">
+    <h3>4つのスケールの関係性</h3>
+    <p>
+      ナチュラルマイナーが出発点。<code>ハーモニック</code>は7度を上げてV7（ドミナント）を獲得し、
+      <code>メロディック</code>は6度と7度を上げて滑らかに上行、<code>ドリアン</code>は6度だけを上げてジャズ的な浮遊感を持たせる。
+      4つのスケールは<strong>7度の処理だけで個性が決まる</strong>と言える。
+      ★マークの位置を見ると、差分の多くが♭VII/VII列に集中していることがわかる。
+    </p>
+  </div>
+
+  <div class="footer">
+    <a href="../theory">← Theory トップへ戻る</a>　·　
+    Directline Studio
+  </div>
+
+</div>
+
+<script>
+const DATA = {"keys":{"C":{"name":"C Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["Cm7","Dm7♭5","E♭M7","Fm7","Gm7","A♭M7","B♭7"],"harmonic":["CmM7","Dm7♭5","E♭M7♯5","Fm7","G7","A♭M7","Bdim7"],"melodic":["CmM7","Dm7","E♭M7♯5","F7","G7","Am7♭5","Bm7♭5"],"dorian":["Cm7","Dm7","E♭M7","F7","Gm7","Am7♭5","B♭M7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"C#":{"name":"C# Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["C♯m7","D♯m7♭5","EM7","F♯m7","G♯m7","AM7","B7"],"harmonic":["C♯mM7","D♯m7♭5","EM7♯5","F♯m7","G♯7","AM7","B♯dim7"],"melodic":["C♯mM7","D♯m7","EM7♯5","F♯7","G♯7","A♯m7♭5","B♯m7♭5"],"dorian":["C♯m7","D♯m7","EM7","F♯7","G♯m7","A♯m7♭5","BM7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"D":{"name":"D Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["Dm7","Em7♭5","FM7","Gm7","Am7","B♭M7","C7"],"harmonic":["DmM7","Em7♭5","FM7♯5","Gm7","A7","B♭M7","C♯dim7"],"melodic":["DmM7","Em7","FM7♯5","G7","A7","Bm7♭5","C♯m7♭5"],"dorian":["Dm7","Em7","FM7","G7","Am7","Bm7♭5","CM7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"D#":{"name":"E♭ Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["E♭m7","Fm7♭5","G♭M7","A♭m7","B♭m7","C♭M7","D♭7"],"harmonic":["E♭mM7","Fm7♭5","G♭M7♯5","A♭m7","B♭7","C♭M7","Ddim7"],"melodic":["E♭mM7","Fm7","G♭M7♯5","A♭7","B♭7","Cm7♭5","Dm7♭5"],"dorian":["E♭m7","Fm7","G♭M7","A♭7","B♭m7","Cm7♭5","D♭M7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"E":{"name":"E Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["Em7","F♯m7♭5","GM7","Am7","Bm7","CM7","D7"],"harmonic":["EmM7","F♯m7♭5","GM7♯5","Am7","B7","CM7","D♯dim7"],"melodic":["EmM7","F♯m7","GM7♯5","A7","B7","C♯m7♭5","D♯m7♭5"],"dorian":["Em7","F♯m7","GM7","A7","Bm7","C♯m7♭5","DM7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"F":{"name":"F Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["Fm7","Gm7♭5","A♭M7","B♭m7","Cm7","D♭M7","E♭7"],"harmonic":["FmM7","Gm7♭5","A♭M7♯5","B♭m7","C7","D♭M7","Edim7"],"melodic":["FmM7","Gm7","A♭M7♯5","B♭7","C7","Dm7♭5","Em7♭5"],"dorian":["Fm7","Gm7","A♭M7","B♭7","Cm7","Dm7♭5","E♭M7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"F#":{"name":"F# Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["F♯m7","G♯m7♭5","AM7","Bm7","C♯m7","DM7","E7"],"harmonic":["F♯mM7","G♯m7♭5","AM7♯5","Bm7","C♯7","DM7","E♯dim7"],"melodic":["F♯mM7","G♯m7","AM7♯5","B7","C♯7","D♯m7♭5","E♯m7♭5"],"dorian":["F♯m7","G♯m7","AM7","B7","C♯m7","D♯m7♭5","EM7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"G":{"name":"G Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["Gm7","Am7♭5","B♭M7","Cm7","Dm7","E♭M7","F7"],"harmonic":["GmM7","Am7♭5","B♭M7♯5","Cm7","D7","E♭M7","F♯dim7"],"melodic":["GmM7","Am7","B♭M7♯5","C7","D7","Em7♭5","F♯m7♭5"],"dorian":["Gm7","Am7","B♭M7","C7","Dm7","Em7♭5","FM7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"G#":{"name":"G# Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["G♯m7","A♯m7♭5","BM7","C♯m7","D♯m7","EM7","F♯7"],"harmonic":["G♯mM7","A♯m7♭5","BM7♯5","C♯m7","D♯7","EM7","F♯♯dim7"],"melodic":["G♯mM7","A♯m7","BM7♯5","C♯7","D♯7","E♯m7♭5","F♯♯m7♭5"],"dorian":["G♯m7","A♯m7","BM7","C♯7","D♯m7","E♯m7♭5","F♯M7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"A":{"name":"A Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["Am7","Bm7♭5","CM7","Dm7","Em7","FM7","G7"],"harmonic":["AmM7","Bm7♭5","CM7♯5","Dm7","E7","FM7","G♯dim7"],"melodic":["AmM7","Bm7","CM7♯5","D7","E7","F♯m7♭5","G♯m7♭5"],"dorian":["Am7","Bm7","CM7","D7","Em7","F♯m7♭5","GM7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"A#":{"name":"B♭ Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["B♭m7","Cm7♭5","D♭M7","E♭m7","Fm7","G♭M7","A♭7"],"harmonic":["B♭mM7","Cm7♭5","D♭M7♯5","E♭m7","F7","G♭M7","Adim7"],"melodic":["B♭mM7","Cm7","D♭M7♯5","E♭7","F7","Gm7♭5","Am7♭5"],"dorian":["B♭m7","Cm7","D♭M7","E♭7","Fm7","Gm7♭5","A♭M7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}},"B":{"name":"B Minor","m":{"natural":["Im7","IIm7♭5","♭IIIM7","IVm7","Vm7","♭VIM7","♭VII7"],"harmonic":["ImM7","IIm7♭5","♭IIIM7♯5","IVm7","V7","♭VIM7","VIIdim7"],"melodic":["ImM7","IIm7","♭IIIM7♯5","IV7","V7","VIm7♭5","VIIm7♭5"],"dorian":["Im7","IIm7","♭IIIM7","IV7","Vm7","VIm7♭5","♭VIIM7"]},"c":{"natural":["Bm7","C♯m7♭5","DM7","Em7","F♯m7","GM7","A7"],"harmonic":["BmM7","C♯m7♭5","DM7♯5","Em7","F♯7","GM7","A♯dim7"],"melodic":["BmM7","C♯m7","DM7♯5","E7","F♯7","G♯m7♭5","A♯m7♭5"],"dorian":["Bm7","C♯m7","DM7","E7","F♯m7","G♯m7♭5","AM7"]},"d":{"natural":[false,false,false,false,false,false,true],"harmonic":[false,false,false,false,false,false,true],"melodic":[false,false,false,false,false,false,true],"dorian":[false,false,false,false,false,false,true]}}},"functions":{"natural":["T","SD","T","SD","D弱","SDm","SDm"],"harmonic":["T","SD","T","SD","D","SDm","D"],"melodic":["T","SD","T","SD","D","T","D"],"dorian":["T","SD","T","SD","D弱","T","SDm"]}};
+
+const SCALE_FORMULA = {
+  natural:  '1 2 ♭3 4 5 ♭6 ♭7',
+  harmonic: '1 2 ♭3 4 5 ♭6  7',
+  melodic:  '1 2 ♭3 4 5  6  7',
+  dorian:   '1 2 ♭3 4 5  6 ♭7'
+};
+
+const SCALE_NAMES = {
+  natural:  'Natural',
+  harmonic: 'Harmonic',
+  melodic:  'Melodic',
+  dorian:   'Dorian'
+};
+
+const KEY_ORDER = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+let currentKey = 'C';
+let displayMode = 'chord';
+
+function renderKeyButtons() {
+  const wrap = document.getElementById('keyButtons');
+  wrap.innerHTML = '';
+  KEY_ORDER.forEach(k => {
+    const btn = document.createElement('button');
+    btn.className = 'key-btn' + (k === currentKey ? ' active' : '');
+    // D#→E♭, A#→B♭ は実際の譜面表記に合わせる
+    let display;
+    if (k === 'D#') display = 'E♭';
+    else if (k === 'A#') display = 'B♭';
+    else display = k.replace('#', '♯');
+    btn.textContent = display;
+    btn.dataset.key = k;
+    btn.addEventListener('click', () => {
+      currentKey = k;
+      renderKeyButtons();
+      renderMatrix();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function renderMatrix() {
+  const tbody = document.getElementById('matrixBody');
+  const keyData = DATA.keys[currentKey];
+  const functions = DATA.functions;
+  
+  tbody.innerHTML = '';
+  
+  ['natural', 'harmonic', 'melodic', 'dorian'].forEach(scale => {
+    const tr = document.createElement('tr');
+    
+    const labelTd = document.createElement('td');
+    labelTd.innerHTML = '<div class="scale-label ' + scale + '">' +
+      '<span class="scale-name">' + SCALE_NAMES[scale] + '</span>' +
+      '<span class="scale-formula">' + SCALE_FORMULA[scale] + '</span>' +
+      '</div>';
+    tr.appendChild(labelTd);
+    
+    for (let i = 0; i < 7; i++) {
+      const td = document.createElement('td');
+      const chord = (displayMode === 'chord') 
+        ? keyData.c[scale][i]
+        : keyData.m[scale][i];
+      const isUnique = keyData.d[scale][i];
+      const fnTag = functions[scale][i];
+      
+      // ★ muted 削除：全コードくっきり表示する ★
+      let classes = 'chord-cell ' + scale;
+      if (isUnique) classes += ' unique';
+      
+      const compact = chord.length > 7 ? ' compact' : '';
+      
+      td.innerHTML = 
+        '<div class="' + classes + '">' +
+          '<div class="chord-text' + compact + '">' + chord + '</div>' +
+          '<span class="func-tag">' + fnTag + '</span>' +
+        '</div>';
+      tr.appendChild(td);
+    }
+    
+    tbody.appendChild(tr);
+  });
+}
+
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    displayMode = btn.dataset.mode;
+    renderMatrix();
+  });
+});
+
+renderKeyButtons();
+renderMatrix();
+</script>
+</body>
+</html>

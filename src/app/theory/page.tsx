@@ -23,6 +23,14 @@ const tools = [
     href: "/theory/chords.html",
     tags: ["Diatonic", "Functions", "Interactive"],
   },
+  {
+    title: "Minor Scale Matrix",
+    subtitle: "マイナースケール・マトリクス",
+    description:
+      "Natural / Harmonic / Melodic / Dorian の4スケール × 7度数のダイアトニックを一望。スケール固有の差分コードを★で強調。",
+    href: "/theory/minor-matrix.html",
+    tags: ["4 Scales", "Diatonic", "Comparison"],
+  },
 ];
 
 export default function TheoryPage() {
