@@ -3,6 +3,7 @@ import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoint
 import type { QueryDataSourceResponse } from "@notionhq/client/build/src/api-endpoints/data-sources";
 import type { Song, SongDetail, NotionBlock } from "@/types/song";
 import type { Playlist } from "@/types/video";
+import type { BlogPost } from "@/types/blog";
 
 const DATA_SOURCE_ID = "917e0b71-8fda-474c-8fba-9d751866e5dd";
 const PLAYLIST_DB_ID = "6ec1fb96-a440-4bca-a6f7-7b3a42bc7d83";
@@ -786,6 +787,140 @@ function pageToMovie(page: PageObjectResponse): Movie {
     notionUrl: page.url,
   };
 }
+
+// ─── Blog DB ───
+
+const BLOG_DATA_SOURCE_ID =
+  process.env.NOTION_BLOG_DATA_SOURCE_ID ??
+  "ed7ebb1a-e632-4985-b2ca-13ab5957125b";
+
+function getDateProperty(
+  page: PageObjectResponse,
+  name: string
+): string | undefined {
+  const prop = page.properties[name];
+  if (prop?.type === "date" && prop.date) {
+    return prop.date.start;
+  }
+  return undefined;
+}
+
+function getFilesUrl(
+  page: PageObjectResponse,
+  name: string
+): string | undefined {
+  const prop = page.properties[name];
+  if (prop?.type !== "files" || prop.files.length === 0) return undefined;
+  const f = prop.files[0];
+  if (f.type === "external") return f.external.url;
+  if (f.type === "file") return f.file.url;
+  return undefined;
+}
+
+function getBlogTitle(page: PageObjectResponse): string {
+  const prop = page.properties["タイトル"];
+  if (prop?.type === "title") {
+    return prop.title.map((t) => t.plain_text).join("");
+  }
+  return "";
+}
+
+function pageToBlogPost(page: PageObjectResponse): BlogPost {
+  return {
+    id: page.id,
+    title: getBlogTitle(page),
+    slug: getTextProperty(page, "slug"),
+    category: getSelectProperty(page, "カテゴリ"),
+    series: getSelectProperty(page, "シリーズ"),
+    publishedAt: getDateProperty(page, "公開日"),
+    summary: getTextProperty(page, "要約") || undefined,
+    charCount: getNumberProperty(page, "文字数"),
+    coverImage: getFilesUrl(page, "アイキャッチ画像") ?? getCoverUrl(page),
+    tags: getMultiSelectProperty(page, "タグ"),
+  };
+}
+
+function buildBlogPublicFilter() {
+  return {
+    and: [
+      {
+        property: "ステータス",
+        status: { equals: "完了" },
+      },
+      {
+        or: [
+          {
+            property: "公開先",
+            multi_select: { contains: "my-clone" },
+          },
+          {
+            property: "公開先",
+            multi_select: { contains: "両方" },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+export async function fetchBlogPosts(): Promise<BlogPost[]> {
+  const notion = getNotionClient();
+  const posts: BlogPost[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const response: QueryDataSourceResponse = await notion.dataSources.query({
+      data_source_id: BLOG_DATA_SOURCE_ID,
+      filter: buildBlogPublicFilter(),
+      sorts: [{ property: "公開日", direction: "descending" }],
+      start_cursor: cursor,
+      page_size: 100,
+    });
+
+    for (const page of response.results) {
+      if ("properties" in page) {
+        const post = pageToBlogPost(page as PageObjectResponse);
+        if (post.slug) posts.push(post);
+      }
+    }
+
+    cursor = response.has_more
+      ? (response.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor);
+
+  return posts;
+}
+
+export async function fetchBlogPostBySlug(
+  slug: string
+): Promise<BlogPost | null> {
+  const notion = getNotionClient();
+  const response: QueryDataSourceResponse = await notion.dataSources.query({
+    data_source_id: BLOG_DATA_SOURCE_ID,
+    filter: {
+      and: [
+        { property: "slug", rich_text: { equals: slug } },
+        { property: "ステータス", status: { equals: "完了" } },
+        {
+          or: [
+            { property: "公開先", multi_select: { contains: "my-clone" } },
+            { property: "公開先", multi_select: { contains: "両方" } },
+          ],
+        },
+      ],
+    },
+    page_size: 1,
+  });
+
+  const page = response.results[0];
+  if (page && "properties" in page) {
+    return pageToBlogPost(page as PageObjectResponse);
+  }
+  return null;
+}
+
+export const fetchBlogBlocks = fetchSongBlocks;
 
 export async function fetchMovies(): Promise<Movie[]> {
   const movies: Movie[] = [];

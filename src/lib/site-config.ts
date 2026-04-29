@@ -9,6 +9,7 @@ export const publicNavItems = [
   { href: "/artists", label: "Artists" },
   { href: "/history", label: "History" },
   { href: "/theory", label: "Theory" },
+  { href: "/blog", label: "Blog" },
 ];
 
 export const privateNavItems = [
@@ -20,6 +21,7 @@ export const privateNavItems = [
   { href: "/movies", label: "🎬 Movies" },
   { href: "/history", label: "History" },
   { href: "/theory", label: "Theory" },
+  { href: "/blog", label: "Blog" },
 ];
 
 export const navItems = isPublicMode ? publicNavItems : privateNavItems;

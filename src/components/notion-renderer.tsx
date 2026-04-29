@@ -127,6 +127,13 @@ function BlockRenderer({ block }: { block: NotionBlock }) {
         </p>
       );
 
+    case "heading_1":
+      return (
+        <h2 className="text-xl font-bold text-foreground mt-8 mb-3">
+          <RichText texts={block.heading_1!.rich_text} />
+        </h2>
+      );
+
     case "heading_2":
       return (
         <h2 className="text-lg font-bold text-foreground mt-6 mb-2">

@@ -44,6 +44,7 @@ export interface NotionBlock {
   type: string;
   has_children: boolean;
   paragraph?: { rich_text: NotionRichText[]; color: string };
+  heading_1?: { rich_text: NotionRichText[]; color: string };
   heading_2?: { rich_text: NotionRichText[]; color: string };
   heading_3?: { rich_text: NotionRichText[]; color: string };
   bulleted_list_item?: { rich_text: NotionRichText[]; color: string };
