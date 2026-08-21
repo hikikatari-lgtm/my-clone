@@ -2,11 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "my-clone",
+      "name": "my-clone-library",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3100,
-      "autoPort": true
+      "port": 3200,
+      "autoPort": false
     }
   ]
 }

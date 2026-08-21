@@ -18,6 +18,15 @@ export interface SongDetail extends Song {
   era?: string;
   confirmed: boolean;
   aiSummary?: string;
+  /** AI要約（詳細）。見出し付きの長文 */
+  summaryLong?: string;
+  /** 4分 / 8ビート / 8分シャッフル など */
+  rhythm?: string;
+  /** Pf / Gt / Dr / Bass / BAND譜 */
+  instruments: string[];
+  /** 楽譜のURL（Google Drive） */
+  sheetUrl?: string;
+  hasYoutube: boolean;
   difficulty?: string;
   tags: string[];
   artistRelation?: {

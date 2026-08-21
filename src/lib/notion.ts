@@ -162,8 +162,14 @@ export async function fetchSongDetailById(
     const confirmed = getCheckboxProperty(p, "✅ 確認済み");
     const chordProgression = getMultiSelectProperty(p, "コード進行");
     const romanNumeral = getTextProperty(p, "進行ローマ数字") || undefined;
-    const era = getSelectProperty(p, "年代");
+    // 年代は pageToSong 側で multi-select として読んでいる。
+    // ここで select として読み直すと undefined で上書きしてしまうので触らない。
     const aiSummary = getTextProperty(p, "AI要約（短）") || undefined;
+    const summaryLong = getTextProperty(p, "AI要約（詳細）") || undefined;
+    const rhythm = getSelectProperty(p, "リズム");
+    const instruments = getMultiSelectProperty(p, "楽器");
+    const sheetUrl = getUrlProperty(p, "URL");
+    const hasYoutube = getCheckboxProperty(p, "YouTube動画あり");
     const difficulty = getSelectProperty(p, "難易度");
     const tags = getMultiSelectProperty(p, "タグ");
 
@@ -178,8 +184,12 @@ export async function fetchSongDetailById(
       confirmed,
       chordProgression,
       romanNumeral,
-      era,
       aiSummary,
+      summaryLong,
+      rhythm,
+      instruments,
+      sheetUrl,
+      hasYoutube,
       difficulty,
       tags,
       artistRelation,
