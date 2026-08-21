@@ -23,7 +23,7 @@ function getGradient(id: string) {
   return gradients[Math.abs(hash) % gradients.length];
 }
 
-export function SongCard({ song }: { song: Song }) {
+export function SongCard({ song, listMode = false }: { song: Song; listMode?: boolean }) {
   const [artworkUrl, setArtworkUrl] = useState<string | null>(
     song.artworkUrl ?? null
   );
@@ -33,14 +33,14 @@ export function SongCard({ song }: { song: Song }) {
     <Link
       href={`/songs/${song.id}`}
       className={cn(
-        "group rounded-xl overflow-hidden bg-card border border-border",
-        "transition-all duration-200 ease-out",
-        "hover:shadow-lg hover:-translate-y-1",
-        "block"
+        "group overflow-hidden bg-card border-border transition-all duration-200 ease-out hover:shadow-md",
+        listMode
+          ? "flex items-center gap-3 border-b px-3 py-2"
+          : "rounded-xl border block hover:-translate-y-1 hover:shadow-lg"
       )}
     >
       {/* Album art area */}
-      <div className="relative aspect-square w-full overflow-hidden">
+      <div className={cn("relative overflow-hidden flex-shrink-0", listMode ? "w-10 h-10 rounded" : "aspect-square w-full")}>
         {artworkUrl ? (
           <>
             {!loaded && (
@@ -78,21 +78,26 @@ export function SongCard({ song }: { song: Song }) {
       </div>
 
       {/* Info area */}
-      <div className="p-3 space-y-1.5">
+      <div className={cn(listMode ? "flex-1 min-w-0 py-0" : "p-3 space-y-1.5")}>
         <p className="font-semibold text-sm leading-tight truncate text-foreground">
           {song.title}
         </p>
         <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="inline-block rounded-full bg-orange-500/15 text-orange-600 px-2 py-0.5 text-[10px] font-medium">
-            {song.genre}
-          </span>
+        {!listMode && <div className="flex items-center gap-1.5 flex-wrap">
+          {song.genres.map((g) => (
+            <span
+              key={g}
+              className="inline-block rounded-full bg-orange-500/15 text-orange-600 px-2 py-0.5 text-[10px] font-medium"
+            >
+              {g}
+            </span>
+          ))}
           {song.key && (
             <span className="inline-block rounded-full bg-blue-500/15 text-blue-600 px-2 py-0.5 text-[10px] font-medium">
               {song.key}
             </span>
           )}
-        </div>
+        </div>}
       </div>
     </Link>
   );

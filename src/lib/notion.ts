@@ -98,16 +98,18 @@ function getCoverUrl(page: PageObjectResponse): string | undefined {
 }
 
 function pageToSong(page: PageObjectResponse): Song {
-  const genres = getMultiSelectProperty(page, "音楽ジャンル");
   return {
     id: page.id,
     title: getTitleProperty(page),
     artist: getTextProperty(page, "Artist (text)"),
-    genre: genres[0] ?? "Unknown",
+    // ジャンルは「ジャンル（旧）」がマルチセレクト。
+    // 「音楽ジャンル」はリレーションなのでここでは解決できない。
+    genres: getMultiSelectProperty(page, "ジャンル（旧）"),
     key: getSelectProperty(page, "Key"),
     bpm: getNumberProperty(page, "bpm"),
     artworkUrl: getCoverUrl(page),
-    era: getSelectProperty(page, "年代"),
+    // 「年代」はセレクトではなくマルチセレクト。実データはどの曲も1件。
+    era: getMultiSelectProperty(page, "年代")[0],
     difficulty: getSelectProperty(page, "難易度"),
     chordProgression: getMultiSelectProperty(page, "コード進行"),
   };
@@ -165,7 +167,7 @@ export async function fetchSongDetailById(
     const difficulty = getSelectProperty(p, "難易度");
     const tags = getMultiSelectProperty(p, "タグ");
 
-    const artistIds = getRelationIds(p, "アーティスト");
+    const artistIds = getRelationIds(p, "Artist");
     let artistRelation: SongDetail["artistRelation"];
     if (artistIds.length > 0) {
       artistRelation = await resolveArtistName(notion, artistIds[0]);
@@ -190,6 +192,8 @@ export async function fetchSongDetailById(
 export async function fetchSongs(): Promise<Song[]> {
   const notion = getNotionClient();
   const songs: Song[] = [];
+  /** 曲ID → アーティストのリレーション先ページID */
+  const artistIdBySong = new Map<string, string>();
   let cursor: string | undefined;
 
   do {
@@ -205,7 +209,10 @@ export async function fetchSongs(): Promise<Song[]> {
 
     for (const page of response.results) {
       if ("properties" in page) {
-        songs.push(pageToSong(page as PageObjectResponse));
+        const p = page as PageObjectResponse;
+        songs.push(pageToSong(p));
+        const artistId = getRelationIds(p, "Artist")[0];
+        if (artistId) artistIdBySong.set(p.id, artistId);
       }
     }
 
@@ -213,6 +220,25 @@ export async function fetchSongs(): Promise<Song[]> {
       ? (response.next_cursor ?? undefined)
       : undefined;
   } while (cursor);
+
+  // 「Artist (text)」は半数ほどしか入力されていないので、
+  // 空のものはアーティストDBから名前を補う。
+  // 曲ごとに retrieve すると呼び出しが増えるため、DBを1回だけ引いて対応表を作る。
+  if (artistIdBySong.size > 0 && songs.some((s) => !s.artist)) {
+    try {
+      const artists = await fetchArtists();
+      const nameById = new Map(artists.map((a) => [a.id, a.name]));
+      for (const song of songs) {
+        if (song.artist) continue;
+        const artistId = artistIdBySong.get(song.id);
+        const name = artistId ? nameById.get(artistId) : undefined;
+        if (name) song.artist = name;
+      }
+    } catch (e) {
+      // 名前を補えなくても一覧は出す
+      console.error("[fetchSongs] Failed to resolve artist names:", e);
+    }
+  }
 
   return songs;
 }

@@ -231,7 +231,7 @@ export function ArtistAlbumModal({ artist, onClose }: ArtistAlbumModalProps) {
                           {song.title}
                         </p>
                         <p className="text-xs text-zinc-400 truncate">
-                          {[song.genre, song.key, song.bpm ? `${song.bpm} BPM` : null]
+                          {[song.genres[0], song.key, song.bpm ? `${song.bpm} BPM` : null]
                             .filter(Boolean)
                             .join(" · ")}
                         </p>

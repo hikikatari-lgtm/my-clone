@@ -2,7 +2,8 @@ export interface Song {
   id: string;
   title: string;
   artist: string;
-  genre: string;
+  /** 1曲に複数付く（例: Country / Folk / Rock）。未設定なら空配列 */
+  genres: string[];
   key?: string;
   bpm?: number;
   artworkUrl?: string;

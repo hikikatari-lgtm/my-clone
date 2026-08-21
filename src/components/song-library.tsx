@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SongCard } from "@/components/song-card";
 import type { Song } from "@/types/song";
@@ -43,13 +43,14 @@ function FilterPills({
 
 export function SongLibrary({ songs }: { songs: Song[] }) {
   const [query, setQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedEra, setSelectedEra] = useState<string | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
   const [selectedChord, setSelectedChord] = useState<string | null>(null);
 
   const genres = useMemo(
-    () => [...new Set(songs.map((s) => s.genre))].sort(),
+    () => [...new Set(songs.flatMap((s) => s.genres))].sort(),
     [songs]
   );
   const eras = useMemo(
@@ -86,7 +87,7 @@ export function SongLibrary({ songs }: { songs: Song[] }) {
           s.artist.toLowerCase().includes(q)
       );
     }
-    if (selectedGenre) result = result.filter((s) => s.genre === selectedGenre);
+    if (selectedGenre) result = result.filter((s) => s.genres.includes(selectedGenre));
     if (selectedEra) result = result.filter((s) => s.era === selectedEra);
     if (selectedDifficulty) result = result.filter((s) => s.difficulty === selectedDifficulty);
     if (selectedChord) result = result.filter((s) => s.chordProgression.includes(selectedChord));
@@ -133,17 +134,50 @@ export function SongLibrary({ songs }: { songs: Song[] }) {
         </button>
       )}
 
-      {/* Results count */}
-      <p className="text-xs text-muted-foreground">
-        {filtered.length} / {songs.length} 曲
-      </p>
+              {/* Results count + View toggle */}
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {filtered.length} / {songs.length} 曲
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "p-1.5 rounded transition-colors",
+                viewMode === "grid"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "p-1.5 rounded transition-colors",
+                viewMode === "list"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filtered.map((song) => (
-          <SongCard key={song.id} song={song} />
-        ))}
-      </div>
+        {viewMode === "grid" ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filtered.map((song) => (
+              <SongCard key={song.id} song={song} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col divide-y divide-border">
+            {filtered.map((song) => (
+              <SongCard key={song.id} song={song} listMode />
+            ))}
+          </div>
+        )}
 
       {filtered.length === 0 && (
         <p className="text-center text-muted-foreground py-12">

@@ -94,12 +94,14 @@ export function SongTabs({ song, blocks }: SongTabsProps) {
                 </p>
               </div>
             )}
-            <div className="rounded-lg bg-orange-500/10 p-3">
-              <p className="text-xs text-muted-foreground mb-0.5">Genre</p>
-              <p className="text-lg font-semibold text-orange-600">
-                {song.genre}
-              </p>
-            </div>
+            {song.genres.length > 0 && (
+              <div className="rounded-lg bg-orange-500/10 p-3">
+                <p className="text-xs text-muted-foreground mb-0.5">Genre</p>
+                <p className="text-lg font-semibold text-orange-600">
+                  {song.genres.join(" / ")}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Difficulty & Tags */}
