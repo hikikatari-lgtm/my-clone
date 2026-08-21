@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { classifyChord, type ChordFunction } from "@/lib/chord-analysis";
+import { FUNCTION_STYLE } from "@/lib/chord-colors";
 import type { NotionBlock, NotionRichText } from "@/types/song";
 
 function RichText({ texts }: { texts: NotionRichText[] }) {
@@ -77,12 +79,37 @@ function NotionImage({ block }: { block: NotionBlock }) {
   );
 }
 
+/**
+ * 「VIm - VIm/V」のようなローマ数字のセルを解析する。
+ * ローマ数字として読めない（実コード名や説明文の）セルは null を返し、
+ * 呼び出し側で通常表示にフォールバックさせる。
+ *
+ * ここをコンポーネントにすると、内部で null を返しても JSX 要素自体は
+ * 真になってしまい ?? のフォールバックが効かない。必ず関数として使う。
+ */
+function parseChordCell(
+  cell: NotionRichText[]
+): { raw: string; fn: ChordFunction }[] | null {
+  const text = cell.map((t) => t.plain_text).join("").trim();
+  if (!text || text.length > 60) return null;
+
+  const tokens = text.split(/\s*[-–—→]\s*/).map((t) => t.trim()).filter(Boolean);
+  if (tokens.length === 0) return null;
+
+  const chords = tokens.map((raw) => ({ raw, fn: classifyChord(raw) }));
+  const known = chords.filter((c) => c.fn !== "other").length;
+  // 過半数がローマ数字として読めたときだけ色を付ける
+  if (known < Math.ceil(tokens.length * 0.6)) return null;
+
+  return chords;
+}
+
 function TableBlock({ block }: { block: NotionBlock }) {
   const rows = block.children?.filter((c) => c.type === "table_row") ?? [];
   const hasColumnHeader = block.table?.has_column_header ?? false;
 
   return (
-    <div className="my-4 overflow-x-auto rounded-lg border border-border">
+    <div className="my-4 overflow-x-auto rounded-xl border border-border">
       <table className="w-full text-sm">
         <tbody>
           {rows.map((row, rowIdx) => {
@@ -94,20 +121,40 @@ function TableBlock({ block }: { block: NotionBlock }) {
                 key={row.id}
                 className={cn(
                   rowIdx !== rows.length - 1 && "border-b border-border",
-                  isHeader && "bg-muted/50"
+                  isHeader && "bg-muted/60"
                 )}
               >
-                {cells.map((cell, cellIdx) => (
-                  <Tag
-                    key={cellIdx}
-                    className={cn(
-                      "px-3 py-2 text-left whitespace-nowrap",
-                      isHeader && "font-semibold"
-                    )}
-                  >
-                    <RichText texts={cell} />
-                  </Tag>
-                ))}
+                {cells.map((cell, cellIdx) => {
+                  const chords = isHeader ? null : parseChordCell(cell);
+                  return (
+                    <Tag
+                      key={cellIdx}
+                      className={cn(
+                        "px-3 py-2 text-left align-top",
+                        isHeader && "font-semibold",
+                        !chords && "whitespace-nowrap"
+                      )}
+                    >
+                      {chords ? (
+                        <span className="inline-flex flex-wrap gap-1">
+                          {chords.map((c, i) => (
+                            <span
+                              key={i}
+                              className={cn(
+                                "rounded px-1.5 py-0.5 font-mono text-[12.5px] font-semibold ring-1 ring-inset",
+                                FUNCTION_STYLE[c.fn]
+                              )}
+                            >
+                              {c.raw}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <RichText texts={cell} />
+                      )}
+                    </Tag>
+                  );
+                })}
               </tr>
             );
           })}
@@ -129,21 +176,23 @@ function BlockRenderer({ block }: { block: NotionBlock }) {
 
     case "heading_1":
       return (
-        <h2 className="text-xl font-bold text-foreground mt-8 mb-3">
+        <h2 className="mt-10 mb-4 border-b border-border pb-2 text-xl font-bold text-foreground">
           <RichText texts={block.heading_1!.rich_text} />
         </h2>
       );
 
     case "heading_2":
       return (
-        <h2 className="text-lg font-bold text-foreground mt-6 mb-2">
+        <h2 className="mt-9 mb-3 border-b border-border pb-2 text-lg font-bold text-foreground">
           <RichText texts={block.heading_2!.rich_text} />
         </h2>
       );
 
+    // 「【A1】1〜8小節目「Georgia, Georgia...」」のような小見出し。
+    // 左に色帯を出して、本文と混ざらないようにする。
     case "heading_3":
       return (
-        <h3 className="text-base font-semibold text-foreground mt-4 mb-1.5">
+        <h3 className="mt-6 mb-2 border-l-[3px] border-sky-500/60 pl-2.5 text-[0.95rem] font-bold text-foreground">
           <RichText texts={block.heading_3!.rich_text} />
         </h3>
       );
@@ -251,6 +300,64 @@ function BlockRenderer({ block }: { block: NotionBlock }) {
         </div>
       );
     }
+
+    // 理論解説の図（ベースの動きや構成音）が入っている。
+    // これまで描画されず、22ブロックが丸ごと見えていなかった。
+    case "code": {
+      const text = block.code?.rich_text ?? [];
+      if (text.length === 0) return null;
+      return (
+        <figure className="my-4">
+          <pre className="overflow-x-auto rounded-lg border border-border bg-muted/60 px-4 py-3 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-foreground">
+            {text.map((t) => t.plain_text).join("")}
+          </pre>
+          {block.code?.caption && block.code.caption.length > 0 && (
+            <figcaption className="mt-1.5 text-xs text-muted-foreground">
+              <RichText texts={block.code.caption} />
+            </figcaption>
+          )}
+        </figure>
+      );
+    }
+
+    case "bookmark":
+    case "embed": {
+      const url = block.bookmark?.url ?? block.embed?.url;
+      if (!url) return null;
+      return (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="my-3 flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-foreground transition-colors hover:bg-muted"
+        >
+          <span className="truncate">{url}</span>
+        </a>
+      );
+    }
+
+    case "pdf": {
+      const url =
+        block.pdf?.type === "file" ? block.pdf.file?.url : block.pdf?.external?.url;
+      if (!url) return null;
+      return (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="my-3 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          PDF を開く
+        </a>
+      );
+    }
+
+    case "child_page":
+      return (
+        <p className="my-2 text-sm text-muted-foreground">
+          {block.child_page?.title}
+        </p>
+      );
 
     default:
       return null;

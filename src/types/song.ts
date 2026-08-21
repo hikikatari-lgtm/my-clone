@@ -80,6 +80,16 @@ export interface NotionBlock {
   column?: Record<string, never>;
   divider?: Record<string, never>;
   callout?: { rich_text: NotionRichText[]; icon?: { emoji?: string }; color: string };
+  code?: { rich_text: NotionRichText[]; language?: string; caption?: NotionRichText[] };
+  bookmark?: { url: string; caption?: NotionRichText[] };
+  embed?: { url: string; caption?: NotionRichText[] };
+  pdf?: {
+    type: string;
+    file?: { url: string };
+    external?: { url: string };
+    caption?: NotionRichText[];
+  };
+  child_page?: { title: string };
   quote?: { rich_text: NotionRichText[]; color: string };
   toggle?: { rich_text: NotionRichText[]; color: string };
   children?: NotionBlock[];
