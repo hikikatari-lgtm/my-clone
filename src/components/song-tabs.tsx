@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExternalLink, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotionRenderer } from "@/components/notion-renderer";
+import { ChordLegend } from "@/components/chord-legend";
 import type { SongDetail, NotionBlock } from "@/types/song";
 
 const tabs = [
@@ -154,6 +155,9 @@ export function SongTabs({ song, blocks }: SongTabsProps) {
 
       {active === "chords" && (
         <div className="space-y-4">
+          {/* 表の読み方。色の意味が書かれていないと記号の羅列に見えるため、最初に置く */}
+          <ChordLegend />
+
           {/* Chord Progression */}
           {song.confirmed && song.chordProgression.length > 0 && (
             <div className="space-y-1.5">
@@ -171,16 +175,24 @@ export function SongTabs({ song, blocks }: SongTabsProps) {
             </div>
           )}
 
-          {/* Roman Numeral */}
+          {/* Roman Numeral —
+              整理前の生の並び。下のセクション別の表に同じ内容が読みやすい形で入っているので、
+              初見の人の目に最初に触れないよう畳んでおく */}
           {song.confirmed && song.romanNumeral && (
-            <div className="rounded-lg bg-muted/50 border border-border p-3">
-              <p className="text-xs text-muted-foreground mb-1">
-                Roman Numeral
-              </p>
-              <p className="text-sm font-mono font-medium text-foreground">
+            <details className="group rounded-lg border border-border bg-muted/50 p-3">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs text-muted-foreground marker:hidden">
+                <span>ローマ数字だけをまとめて見る</span>
+                <span
+                  aria-hidden
+                  className="shrink-0 text-base leading-none transition-transform group-open:rotate-45"
+                >
+                  ＋
+                </span>
+              </summary>
+              <p className="mt-2 text-sm font-mono font-medium text-foreground">
                 {song.romanNumeral}
               </p>
-            </div>
+            </details>
           )}
 
           {/* Notion content (excluding images, videos, audio, paragraphs) */}
